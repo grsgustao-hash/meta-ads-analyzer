@@ -7,29 +7,38 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#0b0c14; color:#fff; }
-    .spinner { border:3px solid rgba(255,255,255,.1); border-top:3px solid #3b82f6; border-radius:50%; width:36px; height:36px; animation:spin .8s linear infinite; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#080910; color:#fff; }
+    .spinner { border:3px solid rgba(255,255,255,.08); border-top:3px solid #3b82f6; border-radius:50%; width:36px; height:36px; animation:spin .8s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* Cards */
-    .metric-card { border-radius:14px; padding:20px 22px; position:relative; overflow:hidden; min-height:110px; display:flex; flex-direction:column; justify-content:space-between; }
-    .metric-card .icon { position:absolute; top:16px; right:16px; opacity:.6; }
-    .metric-card .label { font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; opacity:.75; }
-    .metric-card .value { font-size:26px; font-weight:700; line-height:1.1; margin-top:8px; }
-    .metric-card .sub   { font-size:11px; opacity:.6; margin-top:4px; }
+    /* ── Cards ──────────────────────────────────────────────────── */
+    .metric-card {
+      border-radius:16px; padding:20px 22px; position:relative; overflow:hidden;
+      min-height:122px; display:flex; flex-direction:column;
+      background:#111422; border:1px solid rgba(255,255,255,.07);
+      transition:border-color .2s ease, transform .15s ease, box-shadow .2s ease;
+    }
+    .metric-card:hover { border-color:rgba(255,255,255,.15); transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,0,0,.35); }
+    .metric-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--c,#3b82f6); }
+    .icon-wrap { width:34px; height:34px; border-radius:10px; background:rgba(var(--cr,96,165,250),.12); border:1px solid rgba(var(--cr,96,165,250),.18); display:flex; align-items:center; justify-content:center; color:var(--c,#60a5fa); margin-bottom:14px; flex-shrink:0; }
+    .icon-wrap svg { width:16px; height:16px; }
+    .metric-card .label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#475569; }
+    .metric-card .value { font-size:26px; font-weight:800; line-height:1.1; margin-top:6px; color:#f1f5f9; }
+    .metric-card .sub   { font-size:11px; color:#475569; margin-top:5px; }
 
-    .card-blue   { background:linear-gradient(135deg,#1d4ed8,#2563eb); }
-    .card-indigo { background:linear-gradient(135deg,#4338ca,#6366f1); }
-    .card-teal   { background:linear-gradient(135deg,#0f766e,#14b8a6); }
-    .card-purple { background:linear-gradient(135deg,#6d28d9,#8b5cf6); }
-    .card-dark   { background:#1a1d2e; border:1px solid rgba(255,255,255,.07); color:#e2e8f0; }
-    .card-green  { background:linear-gradient(135deg,#166534,#22c55e); }
-    .card-orange { background:linear-gradient(135deg,#c2410c,#f97316); }
-    .card-rose   { background:linear-gradient(135deg,#9f1239,#f43f5e); }
-    .card-cyan   { background:linear-gradient(135deg,#155e75,#06b6d4); }
+    .card-blue   { --c:#60a5fa; --cr:96,165,250; }
+    .card-indigo { --c:#818cf8; --cr:129,140,248; }
+    .card-teal   { --c:#2dd4bf; --cr:45,212,191; }
+    .card-purple { --c:#a78bfa; --cr:167,139,250; }
+    .card-dark   { --c:#64748b; --cr:100,116,139; }
+    .card-green  { --c:#4ade80; --cr:74,222,128; }
+    .card-orange { --c:#fb923c; --cr:251,146,60; }
+    .card-rose   { --c:#fb7185; --cr:251,113,133; }
+    .card-cyan   { --c:#22d3ee; --cr:34,211,238; }
 
-    /* Section */
-    .section-label { font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#64748b; display:flex; align-items:center; gap:6px; margin-bottom:12px; }
+    /* ── Section labels ─────────────────────────────────────────── */
+    .section-label { font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#3b4a63; display:flex; align-items:center; gap:8px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,.05); }
+    .section-label svg { color:#3b82f6; opacity:.5; }
 
     /* Chart container */
     .chart-box { background:#131520; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:24px; }
@@ -89,23 +98,25 @@
 <body class="min-h-screen">
 
 <!-- ─── HEADER ─── -->
-<header style="background:#0d0e1a;border-bottom:1px solid rgba(255,255,255,.07)" class="px-6 py-4 sticky top-0 z-20">
+<header class="px-6 py-3.5 sticky top-0 z-20" style="background:rgba(8,9,16,.92);border-bottom:1px solid rgba(255,255,255,.06);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)">
+  <!-- top gradient accent line -->
+  <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,#3b82f6 30%,#8b5cf6 60%,transparent 100%);opacity:.6"></div>
   <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">
         <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
         </svg>
       </div>
       <div>
         <h1 class="text-sm font-bold text-white leading-none" id="headerTitle">Meta Ads</h1>
-        <p class="text-xs mt-0.5" style="color:#475569" id="headerDateSub">Meta Ads Dashboard</p>
+        <p class="text-xs mt-0.5" style="color:#3b4a63;font-weight:500" id="headerDateSub">Meta Ads Dashboard</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
       <!-- Account Picker -->
       <div id="accountPicker">
-        <button id="accountToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-colors" style="background:#1a1d2e;border:1px solid rgba(255,255,255,.1);color:#94a3b8">
+        <button id="accountToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-all" style="background:#111422;border:1px solid rgba(255,255,255,.08);color:#94a3b8;hover:border-color:rgba(255,255,255,.15)">
           <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
           </svg>
@@ -121,7 +132,7 @@
       </div>
       <!-- Date Picker -->
       <div id="datePicker">
-        <button id="dateToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-colors" style="background:#1a1d2e;border:1px solid rgba(255,255,255,.1);color:#94a3b8">
+        <button id="dateToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-all" style="background:#111422;border:1px solid rgba(255,255,255,.08);color:#94a3b8">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
@@ -150,7 +161,7 @@
           <button id="applyCustom" class="w-full bg-blue-600 text-white text-sm py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">Aplicar período</button>
         </div>
       </div>
-      <button id="refreshBtn" class="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5 font-medium">
+      <button id="refreshBtn" class="text-white text-sm px-4 py-2 rounded-lg flex items-center gap-1.5 font-medium transition-all" style="background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 0 0 1px rgba(124,58,237,.3)">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
