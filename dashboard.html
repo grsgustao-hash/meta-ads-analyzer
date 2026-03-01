@@ -76,6 +76,14 @@
     /* Chart metric selector */
     .chart-sel { background:#0d0e1a; border:1px solid rgba(255,255,255,.1); border-radius:8px; color:#94a3b8; font-size:12px; padding:5px 10px; outline:none; cursor:pointer; }
     .chart-sel:focus { border-color:#3b82f6; }
+
+    /* Account picker */
+    #accountPicker { position:relative; }
+    #accountDropdown { display:none; position:absolute; left:0; top:calc(100% + 8px); background:#1a1d2e; border:1px solid rgba(255,255,255,.1); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.5); padding:12px; min-width:240px; max-width:320px; z-index:50; max-height:300px; overflow-y:auto; }
+    #accountDropdown.open { display:block; }
+    .account-btn { display:block; width:100%; text-align:left; padding:8px 12px; border-radius:8px; font-size:13px; color:#94a3b8; cursor:pointer; border:none; background:transparent; transition:background .1s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .account-btn:hover { background:rgba(255,255,255,.06); color:#e2e8f0; }
+    .account-btn.active { background:rgba(59,130,246,.2); color:#60a5fa; font-weight:600; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -90,11 +98,27 @@
         </svg>
       </div>
       <div>
-        <h1 class="text-sm font-bold text-white leading-none">CA - A Ordem</h1>
+        <h1 class="text-sm font-bold text-white leading-none" id="headerTitle">Meta Ads</h1>
         <p class="text-xs mt-0.5" style="color:#475569" id="headerDateSub">Meta Ads Dashboard</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <!-- Account Picker -->
+      <div id="accountPicker">
+        <button id="accountToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-colors" style="background:#1a1d2e;border:1px solid rgba(255,255,255,.1);color:#94a3b8">
+          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+          </svg>
+          <span id="accountLabel">Carregando…</span>
+          <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+        <div id="accountDropdown">
+          <p class="text-xs font-semibold uppercase tracking-wider mb-2 px-2" style="color:#475569">Conta de anúncios</p>
+          <div id="accountList"><p class="text-xs px-2 py-2" style="color:#475569">Carregando contas…</p></div>
+        </div>
+      </div>
       <!-- Date Picker -->
       <div id="datePicker">
         <button id="dateToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-colors" style="background:#1a1d2e;border:1px solid rgba(255,255,255,.1);color:#94a3b8">
@@ -344,7 +368,7 @@
 </main>
 
 <script>
-const ACCOUNT = "act_717055595505474";
+let ACCOUNT = "act_717055595505474";
 
 // ── API proxy helpers ─────────────────────────────────────────────────────────
 // All Meta API calls go through /api/meta — token stays server-side.
@@ -736,8 +760,62 @@ $('applyCustom').addEventListener('click',()=>{
 
 $('refreshBtn').addEventListener('click',()=>load());
 
+// ── ACCOUNT PICKER ────────────────────────────────────────────────────────────
+$('accountToggle').addEventListener('click', e => {
+  e.stopPropagation();
+  $('accountDropdown').classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if (!$('accountPicker').contains(e.target)) $('accountDropdown').classList.remove('open');
+});
+
+async function loadAccounts() {
+  try {
+    const url = apiUrl('me/adaccounts', { fields: 'id,name', limit: 50 });
+    const accounts = await fetchPages(url, 50);
+    const list = $('accountList');
+    list.innerHTML = '';
+    if (!accounts.length) {
+      list.innerHTML = '<p class="text-xs px-2 py-2" style="color:#f87171">Nenhuma conta encontrada.</p>';
+      return;
+    }
+    // Default to first account if current ACCOUNT not in list
+    const hasDefault = accounts.find(a => a.id === ACCOUNT);
+    if (!hasDefault) {
+      ACCOUNT = accounts[0].id;
+    }
+    accounts.forEach(acc => {
+      const btn = document.createElement('button');
+      btn.className = 'account-btn' + (acc.id === ACCOUNT ? ' active' : '');
+      btn.textContent = acc.name;
+      btn.title = acc.name;
+      btn.addEventListener('click', () => {
+        ACCOUNT = acc.id;
+        document.querySelectorAll('.account-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        $('accountLabel').textContent = acc.name;
+        $('headerTitle').textContent = acc.name;
+        $('accountDropdown').classList.remove('open');
+        load();
+      });
+      list.appendChild(btn);
+    });
+    // Set initial label
+    const current = accounts.find(a => a.id === ACCOUNT) || accounts[0];
+    $('accountLabel').textContent = current.name;
+    $('headerTitle').textContent = current.name;
+  } catch(e) {
+    $('accountLabel').textContent = 'Erro ao carregar';
+    $('accountList').innerHTML = `<p class="text-xs px-2 py-2" style="color:#f87171">${e.message}</p>`;
+    console.error('loadAccounts:', e);
+  }
+}
+
 // Boot
-load();
+(async () => {
+  await loadAccounts();
+  load();
+})();
 </script>
 </body>
 </html>
