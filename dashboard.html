@@ -23,8 +23,8 @@
     .icon-wrap { width:34px; height:34px; border-radius:10px; background:rgba(var(--cr,96,165,250),.12); border:1px solid rgba(var(--cr,96,165,250),.18); display:flex; align-items:center; justify-content:center; color:var(--c,#60a5fa); margin-bottom:14px; flex-shrink:0; }
     .icon-wrap svg { width:16px; height:16px; }
     .metric-card .label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#475569; }
-    .metric-card .value { font-size:26px; font-weight:800; line-height:1.1; margin-top:6px; color:#f1f5f9; }
-    .metric-card .sub   { font-size:11px; color:#475569; margin-top:5px; }
+    .metric-card .value { font-size:clamp(16px,2.2vw,26px); font-weight:800; line-height:1.1; margin-top:6px; color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .metric-card .sub   { font-size:11px; color:#475569; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
     .card-blue   { --c:#60a5fa; --cr:96,165,250; }
     .card-indigo { --c:#818cf8; --cr:129,140,248; }
@@ -46,9 +46,10 @@
 
     /* Table */
     .dark-table { background:#111422; border:1px solid rgba(255,255,255,.06); border-radius:16px; overflow:hidden; }
+    .dark-table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .dark-table thead tr { background:#0f1020; }
     .dark-table th { color:#3b4a63; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:11px 14px; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,.06); }
-    .dark-table td { padding:11px 14px; font-size:12px; border-bottom:1px solid rgba(255,255,255,.04); color:#94a3b8; }
+    .dark-table td { padding:11px 14px; font-size:12px; border-bottom:1px solid rgba(255,255,255,.04); color:#94a3b8; white-space:nowrap; }
     .dark-table tr:last-child td { border-bottom:none; }
     .dark-table tr:hover td { background:rgba(59,130,246,.04); }
 
@@ -109,7 +110,7 @@
         </svg>
       </div>
       <div>
-        <h1 class="text-sm font-bold text-white leading-none" id="headerTitle">Meta Ads</h1>
+        <h1 class="text-sm font-bold text-white leading-none" id="headerTitle" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Meta Ads</h1>
         <p class="text-xs mt-0.5" style="color:#3b4a63;font-weight:500" id="headerDateSub">Meta Ads Dashboard</p>
       </div>
     </div>
@@ -314,20 +315,22 @@
         </div>
         <!-- Campaign table -->
         <div class="dark-table">
-          <table class="w-full text-xs">
+          <div class="dark-table-scroll">
+          <table class="w-full text-xs" style="min-width:680px">
             <thead><tr>
               <th class="text-left" style="min-width:220px">Campanha</th>
-              <th class="text-center">Status</th>
-              <th class="text-right">Spent</th>
-              <th class="text-right">Impressions</th>
-              <th class="text-right">CPM</th>
-              <th class="text-right">CTR (all)</th>
-              <th class="text-right">Purchases</th>
-              <th class="text-right">CPA</th>
-              <th class="text-right">ROAS</th>
+              <th class="text-center" style="min-width:100px">Status</th>
+              <th class="text-right" style="min-width:90px">Spent</th>
+              <th class="text-right" style="min-width:90px">Impressions</th>
+              <th class="text-right" style="min-width:80px">CPM</th>
+              <th class="text-right" style="min-width:80px">CTR (all)</th>
+              <th class="text-right" style="min-width:80px">Purchases</th>
+              <th class="text-right" style="min-width:80px">CPA</th>
+              <th class="text-right" style="min-width:70px">ROAS</th>
             </tr></thead>
             <tbody id="campTableBody"></tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -339,24 +342,26 @@
             class="w-full pl-9 pr-4 py-2 text-sm rounded-lg" style="background:#131520;border:1px solid rgba(255,255,255,.07);color:#e2e8f0;outline:none"/>
         </div>
         <div class="dark-table">
-          <table class="w-full text-xs">
+          <div class="dark-table-scroll">
+          <table class="w-full text-xs" style="min-width:980px">
             <thead><tr>
               <th class="text-left" style="min-width:240px">Anúncio</th>
-              <th class="text-left" style="min-width:160px">Conjunto</th>
-              <th class="text-center">Status</th>
-              <th class="text-right">Spent</th>
-              <th class="text-right">Impressions</th>
-              <th class="text-right">CPM</th>
-              <th class="text-right">CTR (all)</th>
-              <th class="text-right">CPC Link</th>
-              <th class="text-right" title="3s views / impressions">Hook Rate</th>
-              <th class="text-right" title="75% views / impressions">Hold Rate</th>
-              <th class="text-right">Purchases</th>
-              <th class="text-right">CPA</th>
-              <th class="text-right">ROAS</th>
+              <th class="text-left" style="min-width:150px">Conjunto</th>
+              <th class="text-center" style="min-width:90px">Status</th>
+              <th class="text-right" style="min-width:80px">Spent</th>
+              <th class="text-right" style="min-width:80px">Impressions</th>
+              <th class="text-right" style="min-width:75px">CPM</th>
+              <th class="text-right" style="min-width:70px">CTR (all)</th>
+              <th class="text-right" style="min-width:75px">CPC Link</th>
+              <th class="text-right" style="min-width:80px" title="3s views / impressions">Hook Rate</th>
+              <th class="text-right" style="min-width:80px" title="75% views / impressions">Hold Rate</th>
+              <th class="text-right" style="min-width:75px">Purchases</th>
+              <th class="text-right" style="min-width:80px">CPA</th>
+              <th class="text-right" style="min-width:65px">ROAS</th>
             </tr></thead>
             <tbody id="adTableBody"></tbody>
           </table>
+          </div>
           <div id="adTableEmpty" class="hidden text-center py-10 text-sm" style="color:#475569">Nenhum anúncio encontrado.</div>
         </div>
       </div>
