@@ -52,6 +52,11 @@
     .dark-table td { padding:11px 14px; font-size:12px; border-bottom:1px solid rgba(255,255,255,.04); color:#94a3b8; white-space:nowrap; }
     .dark-table tr:last-child td { border-bottom:none; }
     .dark-table tr:hover td { background:rgba(59,130,246,.04); }
+    .sortable-th { cursor:pointer; transition:color .15s; }
+    .sortable-th:hover { color:#60a5fa !important; }
+    .sort-icon { display:inline-block; margin-left:3px; opacity:.2; font-size:10px; vertical-align:middle; transition:opacity .15s; }
+    .sortable-th.sort-active { color:#60a5fa !important; }
+    .sortable-th.sort-active .sort-icon { opacity:1; }
 
     /* Tabs */
     .tab-btn { padding:6px 18px; border-radius:8px; font-size:13px; font-weight:500; color:#475569; cursor:pointer; transition:all .15s; border:none; background:transparent; }
@@ -317,16 +322,16 @@
         <div class="dark-table">
           <div class="dark-table-scroll">
           <table class="w-full text-xs" style="min-width:680px">
-            <thead><tr>
-              <th class="text-left" style="min-width:220px">Campanha</th>
+            <thead id="campTableHead"><tr>
+              <th class="text-left sortable-th" data-sort="name" style="min-width:220px">Campanha <span class="sort-icon">↕</span></th>
               <th class="text-center" style="min-width:100px">Status</th>
-              <th class="text-right" style="min-width:90px">Spent</th>
-              <th class="text-right" style="min-width:90px">Impressions</th>
-              <th class="text-right" style="min-width:80px">CPM</th>
-              <th class="text-right" style="min-width:80px">CTR (all)</th>
-              <th class="text-right" style="min-width:80px">Purchases</th>
-              <th class="text-right" style="min-width:80px">CPA</th>
-              <th class="text-right" style="min-width:70px">ROAS</th>
+              <th class="text-right sortable-th sort-active" data-sort="spend" style="min-width:90px">Spent <span class="sort-icon">↓</span></th>
+              <th class="text-right sortable-th" data-sort="impressions" style="min-width:90px">Impressions <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="cpm" style="min-width:80px">CPM <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="ctr" style="min-width:80px">CTR (all) <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="purchases" style="min-width:80px">Purchases <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="cpa" style="min-width:80px">CPA <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="roas" style="min-width:70px">ROAS <span class="sort-icon">↕</span></th>
             </tr></thead>
             <tbody id="campTableBody"></tbody>
           </table>
@@ -344,20 +349,20 @@
         <div class="dark-table">
           <div class="dark-table-scroll">
           <table class="w-full text-xs" style="min-width:980px">
-            <thead><tr>
-              <th class="text-left" style="min-width:240px">Anúncio</th>
-              <th class="text-left" style="min-width:150px">Conjunto</th>
+            <thead id="adTableHead"><tr>
+              <th class="text-left sortable-th" data-sort="name" style="min-width:240px">Anúncio <span class="sort-icon">↕</span></th>
+              <th class="text-left sortable-th" data-sort="adset" style="min-width:150px">Conjunto <span class="sort-icon">↕</span></th>
               <th class="text-center" style="min-width:90px">Status</th>
-              <th class="text-right" style="min-width:80px">Spent</th>
-              <th class="text-right" style="min-width:80px">Impressions</th>
-              <th class="text-right" style="min-width:75px">CPM</th>
-              <th class="text-right" style="min-width:70px">CTR (all)</th>
-              <th class="text-right" style="min-width:75px">CPC Link</th>
-              <th class="text-right" style="min-width:80px" title="3s views / impressions">Hook Rate</th>
-              <th class="text-right" style="min-width:80px" title="75% views / impressions">Hold Rate</th>
-              <th class="text-right" style="min-width:75px">Purchases</th>
-              <th class="text-right" style="min-width:80px">CPA</th>
-              <th class="text-right" style="min-width:65px">ROAS</th>
+              <th class="text-right sortable-th sort-active" data-sort="spend" style="min-width:80px">Spent <span class="sort-icon">↓</span></th>
+              <th class="text-right sortable-th" data-sort="impressions" style="min-width:80px">Impressions <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="cpm" style="min-width:75px">CPM <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="ctr" style="min-width:70px">CTR (all) <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="cpc_link" style="min-width:75px">CPC Link <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="hook_rate" style="min-width:80px" title="3s views / impressions">Hook Rate <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="hold_rate" style="min-width:80px" title="75% views / impressions">Hold Rate <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="purchases" style="min-width:75px">Purchases <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="cpa" style="min-width:80px">CPA <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="roas" style="min-width:65px">ROAS <span class="sort-icon">↕</span></th>
             </tr></thead>
             <tbody id="adTableBody"></tbody>
           </table>
@@ -389,9 +394,12 @@ function toProxy(url) {
 }
 
 let chartSpend = null, chartROAS = null, chartDaily = null;
-let allAds = [], dailyData = [];
+let allAds = [], allCamps = [], dailyData = [];
 let _thumbMap = {}, _linkMap = {};
 let currentDateParam = { preset: 'last_7d' };
+let adSortKey = 'spend',   adSortDir   = 'desc';
+let campSortKey = 'spend', campSortDir = 'desc';
+let _learningMap = {};
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const $   = id => document.getElementById(id);
@@ -409,6 +417,53 @@ function getVideoVal(arr) { if (!arr||!arr.length) return 0; return arr.reduce((
 function truncate(s, max=48) { return s.length > max ? s.slice(0,max)+'…' : s; }
 function cleanName(s) { return s.replace(/^\[G\]\s*/,'').replace(/\[VENDA\]\s*/g,'').replace(/\[ADV\]\s*/g,'').replace(/\[PAGTRUST\]\s*/g,''); }
 function roasColor(r) { return r>=2?'#4ade80':r>=1?'#fbbf24':r>0?'#f87171':'#475569'; }
+
+// ── SORT ──────────────────────────────────────────────────────────────────────
+function getSortVal(item, key) {
+  const imp = parseInt(item.impressions||0);
+  switch(key) {
+    case 'spend':      return parseFloat(item.spend||0);
+    case 'impressions':return imp;
+    case 'cpm':        return parseFloat(item.cpm||0);
+    case 'ctr':        return parseFloat(item.ctr||0);
+    case 'purchases':  return getAction(item.actions,'purchase');
+    case 'roas':       return getRoas(item.purchase_roas);
+    case 'cpa': { const p=getAction(item.actions,'purchase'); return p>0 ? parseFloat(item.spend)/p : Infinity; }
+    case 'cpc_link': { const lc=parseInt(item.inline_link_clicks||0); return lc>0 ? parseFloat(item.spend)/lc : Infinity; }
+    case 'hook_rate': { const v3s=getAction(item.actions,'video_view'); return imp>0&&v3s>0?(v3s/imp)*100:-1; }
+    case 'hold_rate': { const v75=getVideoVal(item.video_p75_watched_actions); return imp>0&&v75>0?(v75/imp)*100:-1; }
+    case 'name': return (item.campaign_name||item.ad_name||'').toLowerCase();
+    case 'adset': return (item.adset_name||'').toLowerCase();
+    default: return 0;
+  }
+}
+
+function doSort(arr, key, dir) {
+  return [...arr].sort((a, b) => {
+    const va = getSortVal(a, key);
+    const vb = getSortVal(b, key);
+    if (typeof va === 'string') return dir==='asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    // Sentinels (Infinity / -1 = sem dados) sempre ao fundo
+    const aBad = !isFinite(va) || va === -1;
+    const bBad = !isFinite(vb) || vb === -1;
+    if (aBad && bBad) return 0;
+    if (aBad) return 1;
+    if (bBad) return -1;
+    return dir === 'desc' ? vb - va : va - vb;
+  });
+}
+
+function updateSortUI(headId, key, dir) {
+  document.querySelectorAll(`#${headId} [data-sort]`).forEach(th => {
+    const thKey = th.dataset.sort;
+    const icon  = th.querySelector('.sort-icon');
+    th.classList.remove('sort-active');
+    if (icon) {
+      if (thKey === key) { th.classList.add('sort-active'); icon.textContent = dir==='desc'?'↓':'↑'; }
+      else               { icon.textContent = '↕'; }
+    }
+  });
+}
 
 function statusBadge(isL) {
   if (isL) return `<span class="badge-learning text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap">🎓 Learning</span>`;
@@ -486,14 +541,15 @@ async function load() {
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function render(campInsights, adsets, adInsights) {
-  const camps = campInsights.filter(c=>parseFloat(c.spend)>0).sort((a,b)=>parseFloat(b.spend)-parseFloat(a.spend));
+  allCamps = campInsights.filter(c=>parseFloat(c.spend)>0);
+  const camps = allCamps; // alias for KPI calculations below
 
-  const learningMap = {};
+  _learningMap = {};
   let totalLearning = 0;
   adsets.forEach(as => {
     const isL = as.learning_phase_info?.status==='LEARNING';
-    if (!learningMap[as.campaign_id]) learningMap[as.campaign_id]=0;
-    if (isL) { learningMap[as.campaign_id]++; totalLearning++; }
+    if (!_learningMap[as.campaign_id]) _learningMap[as.campaign_id]=0;
+    if (isL) { _learningMap[as.campaign_id]++; totalLearning++; }
   });
 
   let spend=0,purchases=0,revenue=0,impressions=0,clicks=0,reach=0,freqSum=0;
@@ -570,29 +626,10 @@ function render(campInsights, adsets, adInsights) {
   });
 
   // Campaign table
-  const ctbody = $('campTableBody');
-  ctbody.innerHTML = '';
-  camps.forEach(c=>{
-    const p  = getAction(c.actions,'purchase');
-    const cp = p>0 ? parseFloat(c.spend)/p : null;
-    const r  = getRoas(c.purchase_roas);
-    const isL= learningMap[c.campaign_id]>0;
-    ctbody.innerHTML += `
-      <tr>
-        <td style="max-width:220px"><span class="block truncate font-medium" style="color:#e2e8f0" title="${c.campaign_name}">${truncate(c.campaign_name,48)}</span></td>
-        <td class="text-center">${statusBadge(isL)}</td>
-        <td class="text-right font-semibold" style="color:#e2e8f0">${brl(parseFloat(c.spend))}</td>
-        <td class="text-right">${fmtK(parseInt(c.impressions||0))}</td>
-        <td class="text-right">${brl(parseFloat(c.cpm||0))}</td>
-        <td class="text-right">${fmt(parseFloat(c.ctr||0),2)}%</td>
-        <td class="text-right">${p>0?fmt(p,0):'—'}</td>
-        <td class="text-right">${cp?brl(cp):'—'}</td>
-        <td class="text-right font-semibold" style="color:${roasColor(r)}">${r>0?fmt(r,2)+'x':'—'}</td>
-      </tr>`;
-  });
+  renderCampTable(allCamps);
 
   // Ad table
-  allAds = adInsights.filter(a=>parseFloat(a.spend)>0).sort((a,b)=>parseFloat(b.spend)-parseFloat(a.spend));
+  allAds = adInsights.filter(a=>parseFloat(a.spend)>0);
   renderAdTable(allAds);
 
   $('loadingState').classList.add('hidden');
@@ -659,14 +696,40 @@ function renderDailyChart(metric) {
   });
 }
 
+// ── CAMP TABLE ────────────────────────────────────────────────────────────────
+function renderCampTable(camps) {
+  const sorted = doSort(camps, campSortKey, campSortDir);
+  const ctbody = $('campTableBody');
+  ctbody.innerHTML = '';
+  sorted.forEach(c => {
+    const p   = getAction(c.actions,'purchase');
+    const cp  = p>0 ? parseFloat(c.spend)/p : null;
+    const r   = getRoas(c.purchase_roas);
+    const isL = _learningMap[c.campaign_id]>0;
+    ctbody.innerHTML += `
+      <tr>
+        <td style="max-width:220px"><span class="block truncate font-medium" style="color:#e2e8f0" title="${c.campaign_name}">${truncate(c.campaign_name,48)}</span></td>
+        <td class="text-center">${statusBadge(isL)}</td>
+        <td class="text-right font-semibold" style="color:#e2e8f0">${brl(parseFloat(c.spend))}</td>
+        <td class="text-right">${fmtK(parseInt(c.impressions||0))}</td>
+        <td class="text-right">${brl(parseFloat(c.cpm||0))}</td>
+        <td class="text-right">${fmt(parseFloat(c.ctr||0),2)}%</td>
+        <td class="text-right">${p>0?fmt(p,0):'—'}</td>
+        <td class="text-right">${cp?brl(cp):'—'}</td>
+        <td class="text-right font-semibold" style="color:${roasColor(r)}">${r>0?fmt(r,2)+'x':'—'}</td>
+      </tr>`;
+  });
+}
+
 // ── AD TABLE ──────────────────────────────────────────────────────────────────
 function renderAdTable(ads) {
+  const sorted = doSort(ads, adSortKey, adSortDir);
   const tbody=$('adTableBody'), empty=$('adTableEmpty');
   tbody.innerHTML='';
   $('tabNote').textContent = `${allAds.length} anúncios · ${ads.length} exibidos`;
-  if (!ads.length) { empty.classList.remove('hidden'); return; }
+  if (!sorted.length) { empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
-  ads.forEach(a=>{
+  sorted.forEach(a=>{
     const p  =getAction(a.actions,'purchase');
     const cp =p>0?parseFloat(a.spend)/p:null;
     const r  =getRoas(a.purchase_roas);
@@ -763,6 +826,33 @@ $('applyCustom').addEventListener('click',()=>{
 });
 
 $('refreshBtn').addEventListener('click',()=>load());
+
+// ── SORT HEADERS ──────────────────────────────────────────────────────────────
+document.querySelectorAll('#campTableHead [data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (key === campSortKey) { campSortDir = campSortDir==='desc'?'asc':'desc'; }
+    else { campSortKey = key; campSortDir = 'desc'; }
+    updateSortUI('campTableHead', campSortKey, campSortDir);
+    renderCampTable(allCamps);
+  });
+});
+
+document.querySelectorAll('#adTableHead [data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (key === adSortKey) { adSortDir = adSortDir==='desc'?'asc':'desc'; }
+    else { adSortKey = key; adSortDir = 'desc'; }
+    updateSortUI('adTableHead', adSortKey, adSortDir);
+    const q = $('adSearch').value.toLowerCase();
+    const filtered = !q ? allAds : allAds.filter(a =>
+      a.ad_name?.toLowerCase().includes(q) ||
+      a.adset_name?.toLowerCase().includes(q) ||
+      a.campaign_name?.toLowerCase().includes(q)
+    );
+    renderAdTable(filtered);
+  });
+});
 
 // ── ACCOUNT PICKER ────────────────────────────────────────────────────────────
 $('accountToggle').addEventListener('click', e => {
