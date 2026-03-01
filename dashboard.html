@@ -41,25 +41,25 @@
     .section-label svg { color:#3b82f6; opacity:.5; }
 
     /* Chart container */
-    .chart-box { background:#131520; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:24px; }
+    .chart-box { background:#111422; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:24px; }
     .chart-wrap { position:relative; height:260px; }
 
     /* Table */
-    .dark-table { background:#131520; border:1px solid rgba(255,255,255,.06); border-radius:16px; overflow:hidden; }
-    .dark-table thead tr { background:#1a1d2e; }
-    .dark-table th { color:#64748b; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:10px 14px; white-space:nowrap; }
-    .dark-table td { padding:10px 14px; font-size:12px; border-bottom:1px solid rgba(255,255,255,.04); color:#cbd5e1; }
+    .dark-table { background:#111422; border:1px solid rgba(255,255,255,.06); border-radius:16px; overflow:hidden; }
+    .dark-table thead tr { background:#0f1020; }
+    .dark-table th { color:#3b4a63; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:11px 14px; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,.06); }
+    .dark-table td { padding:11px 14px; font-size:12px; border-bottom:1px solid rgba(255,255,255,.04); color:#94a3b8; }
     .dark-table tr:last-child td { border-bottom:none; }
-    .dark-table tr:hover td { background:rgba(255,255,255,.02); }
+    .dark-table tr:hover td { background:rgba(59,130,246,.04); }
 
     /* Tabs */
-    .tab-btn { padding:6px 18px; border-radius:8px; font-size:13px; font-weight:500; color:#64748b; cursor:pointer; transition:all .15s; border:none; background:transparent; }
-    .tab-btn.active { background:#1877f2; color:#fff; }
-    .tab-btn:not(.active):hover { background:#1e2130; color:#e2e8f0; }
+    .tab-btn { padding:6px 18px; border-radius:8px; font-size:13px; font-weight:500; color:#475569; cursor:pointer; transition:all .15s; border:none; background:transparent; }
+    .tab-btn.active { background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff; box-shadow:0 2px 12px rgba(124,58,237,.3); }
+    .tab-btn:not(.active):hover { background:rgba(255,255,255,.05); color:#e2e8f0; }
 
     /* Date picker */
     #datePicker { position:relative; }
-    #dateDropdown { display:none; position:absolute; right:0; top:calc(100% + 8px); background:#1a1d2e; border:1px solid rgba(255,255,255,.1); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.5); padding:20px; width:310px; z-index:50; }
+    #dateDropdown { display:none; position:absolute; right:0; top:calc(100% + 8px); background:#111422; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); padding:20px; width:310px; z-index:50; }
     #dateDropdown.open { display:block; }
     .preset-btn { display:block; width:100%; text-align:left; padding:7px 12px; border-radius:8px; font-size:13px; color:#94a3b8; cursor:pointer; border:none; background:transparent; transition:background .1s; }
     .preset-btn:hover { background:rgba(255,255,255,.06); color:#e2e8f0; }
@@ -88,7 +88,7 @@
 
     /* Account picker */
     #accountPicker { position:relative; }
-    #accountDropdown { display:none; position:absolute; left:0; top:calc(100% + 8px); background:#1a1d2e; border:1px solid rgba(255,255,255,.1); border-radius:16px; box-shadow:0 16px 48px rgba(0,0,0,.5); padding:12px; min-width:240px; max-width:320px; z-index:50; max-height:300px; overflow-y:auto; }
+    #accountDropdown { display:none; position:absolute; left:0; top:calc(100% + 8px); background:#111422; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); padding:12px; min-width:240px; max-width:320px; z-index:50; max-height:300px; overflow-y:auto; }
     #accountDropdown.open { display:block; }
     .account-btn { display:block; width:100%; text-align:left; padding:8px 12px; border-radius:8px; font-size:13px; color:#94a3b8; cursor:pointer; border:none; background:transparent; transition:background .1s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .account-btn:hover { background:rgba(255,255,255,.06); color:#e2e8f0; }
@@ -197,24 +197,20 @@
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="metric-card card-blue">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg></div>
-          <span class="label">Amount Spent</span>
-          <div><div class="value" id="kSpend">—</div><div class="sub" id="kSpendSub">—</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg></div>
+          <div><span class="label">Amount Spent</span><div class="value" id="kSpend">—</div><div class="sub" id="kSpendSub">—</div></div>
         </div>
         <div class="metric-card card-indigo">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></div>
-          <span class="label">Impressions</span>
-          <div><div class="value" id="kImpressions">—</div><div class="sub" id="kImpSub">—</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></div>
+          <div><span class="label">Impressions</span><div class="value" id="kImpressions">—</div><div class="sub" id="kImpSub">—</div></div>
         </div>
         <div class="metric-card card-dark">
-          <div class="icon" style="opacity:.4"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-          <span class="label" style="color:#94a3b8">Reach (Accounts Center)</span>
-          <div><div class="value" id="kReach">—</div><div class="sub" id="kReachSub" style="color:#64748b">—</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
+          <div><span class="label">Reach (Accounts Center)</span><div class="value" id="kReach">—</div><div class="sub" id="kReachSub">—</div></div>
         </div>
         <div class="metric-card card-dark">
-          <div class="icon" style="opacity:.4"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
-          <span class="label" style="color:#94a3b8">Frequency</span>
-          <div><div class="value" id="kFrequency">—</div><div class="sub" style="color:#64748b">por Accounts Center account</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
+          <div><span class="label">Frequency</span><div class="value" id="kFrequency">—</div><div class="sub">por Accounts Center account</div></div>
         </div>
       </div>
     </div>
@@ -227,24 +223,20 @@
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="metric-card card-blue">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg></div>
-          <span class="label">Clicks (all)</span>
-          <div><div class="value" id="kClicks">—</div><div class="sub" id="kClicksSub">—</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg></div>
+          <div><span class="label">Clicks (all)</span><div class="value" id="kClicks">—</div><div class="sub" id="kClicksSub">—</div></div>
         </div>
         <div class="metric-card card-teal">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
-          <span class="label">CTR (all)</span>
-          <div><div class="value" id="kCTR">—</div><div class="sub" id="kCTRSub">—</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
+          <div><span class="label">CTR (all)</span><div class="value" id="kCTR">—</div><div class="sub" id="kCTRSub">—</div></div>
         </div>
         <div class="metric-card card-indigo">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg></div>
-          <span class="label">CPM</span>
-          <div><div class="value" id="kCPM">—</div><div class="sub">por mil impressões</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg></div>
+          <div><span class="label">CPM</span><div class="value" id="kCPM">—</div><div class="sub">por mil impressões</div></div>
         </div>
         <div class="metric-card card-purple">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1"/></svg></div>
-          <span class="label">CPC (all)</span>
-          <div><div class="value" id="kCPC">—</div><div class="sub">custo por clique</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1"/></svg></div>
+          <div><span class="label">CPC (all)</span><div class="value" id="kCPC">—</div><div class="sub">custo por clique</div></div>
         </div>
       </div>
     </div>
@@ -257,24 +249,20 @@
       </div>
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="metric-card card-green">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-          <span class="label">Purchases</span>
-          <div><div class="value" id="kPurchases">—</div><div class="sub" id="kPurchasesSub">—</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+          <div><span class="label">Purchases</span><div class="value" id="kPurchases">—</div><div class="sub" id="kPurchasesSub">—</div></div>
         </div>
         <div class="metric-card card-orange">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg></div>
-          <span class="label">Cost per Purchase</span>
-          <div><div class="value" id="kCPA">—</div><div class="sub">por conversão</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg></div>
+          <div><span class="label">Cost per Purchase</span><div class="value" id="kCPA">—</div><div class="sub">por conversão</div></div>
         </div>
         <div class="metric-card card-cyan">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
-          <span class="label">Purchase ROAS</span>
-          <div><div class="value" id="kROAS">—</div><div class="sub" id="kROASSub">—</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
+          <div><span class="label">Purchase ROAS</span><div class="value" id="kROAS">—</div><div class="sub" id="kROASSub">—</div></div>
         </div>
         <div class="metric-card card-purple">
-          <div class="icon"><svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-          <span class="label">Purchase Value</span>
-          <div><div class="value" id="kRevenue">—</div><div class="sub">receita atribuída</div></div>
+          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+          <div><span class="label">Purchase Value</span><div class="value" id="kRevenue">—</div><div class="sub">receita atribuída</div></div>
         </div>
       </div>
     </div>
