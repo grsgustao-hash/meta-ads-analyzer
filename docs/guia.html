@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Guia: Meta Ads Dashboard com Vercel</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background:#fff; color:#1a1a2e; font-size:13px; line-height:1.6; }
+
+    /* Page layout */
+    .page { max-width:820px; margin:0 auto; padding:48px 56px; }
+
+    /* Cover */
+    .cover { min-height:100vh; display:flex; flex-direction:column; justify-content:center; background:linear-gradient(135deg,#0d0e1a 0%,#1a1d2e 60%,#1d4ed8 100%); color:#fff; padding:80px 56px; page-break-after:always; }
+    .cover-logo { width:64px; height:64px; background:#1877f2; border-radius:16px; display:flex; align-items:center; justify-content:center; margin-bottom:32px; }
+    .cover-logo svg { width:36px; height:36px; }
+    .cover h1 { font-size:42px; font-weight:800; line-height:1.15; margin-bottom:16px; }
+    .cover h1 span { color:#60a5fa; }
+    .cover p { font-size:16px; color:#94a3b8; max-width:480px; margin-bottom:48px; }
+    .cover-meta { display:flex; gap:32px; flex-wrap:wrap; }
+    .cover-meta-item { }
+    .cover-meta-item .label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#475569; margin-bottom:4px; }
+    .cover-meta-item .value { font-size:14px; color:#e2e8f0; font-weight:600; }
+
+    /* TOC */
+    .toc { page-break-after:always; padding:56px 0; }
+    .toc h2 { font-size:22px; font-weight:700; margin-bottom:28px; color:#1a1a2e; border-bottom:2px solid #e2e8f0; padding-bottom:12px; }
+    .toc-item { display:flex; align-items:baseline; gap:8px; padding:8px 0; border-bottom:1px dotted #e2e8f0; }
+    .toc-num { font-weight:700; color:#1d4ed8; min-width:28px; font-size:13px; }
+    .toc-title { flex:1; font-size:13px; color:#334155; }
+    .toc-dots { flex:1; border-bottom:1px dotted #cbd5e1; margin:0 8px; position:relative; top:-4px; }
+    .toc-sub { padding:5px 0 5px 36px; border-bottom:1px dotted #f1f5f9; }
+    .toc-sub .toc-num { font-size:12px; color:#64748b; font-weight:500; }
+    .toc-sub .toc-title { font-size:12px; color:#64748b; }
+
+    /* Sections */
+    h2.section-title { font-size:22px; font-weight:800; color:#0f172a; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+    h2.section-title .num { display:inline-flex; width:32px; height:32px; background:#1d4ed8; color:#fff; border-radius:8px; font-size:14px; align-items:center; justify-content:center; flex-shrink:0; }
+    .section-desc { font-size:13px; color:#64748b; margin-bottom:24px; padding-bottom:16px; border-bottom:1px solid #e2e8f0; }
+
+    h3 { font-size:15px; font-weight:700; color:#1e293b; margin:24px 0 10px; }
+    h4 { font-size:13px; font-weight:700; color:#334155; margin:16px 0 8px; text-transform:uppercase; letter-spacing:.06em; }
+    p { margin-bottom:12px; color:#334155; }
+
+    /* Cards */
+    .card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px 20px; margin-bottom:16px; }
+    .card-blue { background:#eff6ff; border-color:#bfdbfe; }
+    .card-green { background:#f0fdf4; border-color:#bbf7d0; }
+    .card-red { background:#fef2f2; border-color:#fecaca; }
+    .card-yellow { background:#fffbeb; border-color:#fde68a; }
+    .card-purple { background:#faf5ff; border-color:#e9d5ff; }
+    .card h4 { margin-top:0; }
+
+    /* Code blocks */
+    pre { background:#0f172a; color:#e2e8f0; border-radius:10px; padding:16px 20px; font-size:11.5px; font-family:'Courier New',monospace; overflow-x:auto; margin-bottom:16px; line-height:1.7; }
+    code { background:#f1f5f9; color:#d946ef; font-family:'Courier New',monospace; font-size:11.5px; padding:2px 5px; border-radius:4px; }
+
+    /* Steps */
+    .step { display:flex; gap:16px; margin-bottom:20px; }
+    .step-num { width:28px; height:28px; background:#1d4ed8; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; margin-top:2px; }
+    .step-content { flex:1; }
+    .step-content strong { display:block; font-size:14px; color:#0f172a; margin-bottom:4px; }
+
+    /* Error/Success blocks */
+    .error-block { background:#fef2f2; border-left:4px solid #ef4444; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:14px; }
+    .error-block .title { font-weight:700; color:#dc2626; font-size:13px; margin-bottom:4px; }
+    .error-block .msg { font-family:'Courier New',monospace; font-size:11px; color:#7f1d1d; background:#fee2e2; padding:6px 10px; border-radius:6px; margin:6px 0; }
+    .success-block { background:#f0fdf4; border-left:4px solid #22c55e; border-radius:0 8px 8px 0; padding:14px 16px; margin-bottom:14px; }
+    .success-block .title { font-weight:700; color:#15803d; font-size:13px; margin-bottom:4px; }
+
+    /* Token tips */
+    .token-tip { display:flex; gap:12px; align-items:flex-start; padding:10px 14px; background:#faf5ff; border:1px solid #e9d5ff; border-radius:8px; margin-bottom:10px; }
+    .token-tip .icon { font-size:18px; flex-shrink:0; }
+    .token-tip .text { font-size:12.5px; color:#4c1d95; }
+    .token-tip .text strong { display:block; color:#6d28d9; margin-bottom:2px; }
+
+    /* Tags */
+    .tag { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; margin-right:6px; }
+    .tag-blue { background:#dbeafe; color:#1d4ed8; }
+    .tag-green { background:#dcfce7; color:#166534; }
+    .tag-red { background:#fee2e2; color:#991b1b; }
+    .tag-yellow { background:#fef9c3; color:#854d0e; }
+
+    /* Table */
+    table { width:100%; border-collapse:collapse; margin-bottom:20px; font-size:12px; }
+    th { background:#1e293b; color:#94a3b8; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:10px 14px; text-align:left; }
+    td { padding:10px 14px; border-bottom:1px solid #f1f5f9; color:#334155; }
+    tr:last-child td { border-bottom:none; }
+    tr:nth-child(even) td { background:#f8fafc; }
+
+    /* Architecture diagram */
+    .arch { background:#0f172a; border-radius:14px; padding:28px; margin-bottom:20px; color:#e2e8f0; font-family:'Courier New',monospace; font-size:12px; line-height:2; }
+    .arch .box { display:inline-block; border:1px solid #334155; border-radius:6px; padding:4px 12px; }
+    .arch .box-blue { border-color:#3b82f6; color:#60a5fa; }
+    .arch .box-green { border-color:#22c55e; color:#4ade80; }
+    .arch .box-yellow { border-color:#f59e0b; color:#fbbf24; }
+    .arch .arrow { color:#475569; }
+
+    /* Page break */
+    .page-break { page-break-before:always; padding-top:48px; }
+    .section-wrap { margin-bottom:40px; }
+
+    /* Checklist */
+    .checklist { list-style:none; padding:0; }
+    .checklist li { padding:6px 0; padding-left:24px; position:relative; font-size:13px; color:#334155; border-bottom:1px solid #f1f5f9; }
+    .checklist li::before { content:'✓'; position:absolute; left:0; color:#22c55e; font-weight:700; }
+    .checklist li.warn::before { content:'⚠'; color:#f59e0b; }
+    .checklist li.cross::before { content:'✗'; color:#ef4444; }
+
+    /* Footer */
+    .footer { margin-top:48px; padding-top:16px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; font-size:11px; color:#94a3b8; }
+
+    @media print {
+      .page { padding:32px 40px; }
+      pre { font-size:10.5px; }
+      .cover { min-height:100vh; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ CAPA ══ -->
+<div class="cover">
+  <div class="cover-logo">
+    <svg fill="white" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+  </div>
+  <h1>Guia Completo:<br><span>Meta Ads Dashboard</span><br>com Vercel</h1>
+  <p>Como criar um webapp de análise de anúncios usando a Meta Graph API, HTML puro e deploy serverless no Vercel — com lições aprendidas, erros e soluções reais.</p>
+  <div class="cover-meta">
+    <div class="cover-meta-item"><div class="label">Data</div><div class="value">Março 2026</div></div>
+    <div class="cover-meta-item"><div class="label">Stack</div><div class="value">HTML · Vercel · Meta API</div></div>
+    <div class="cover-meta-item"><div class="label">Nível</div><div class="value">Iniciante → Intermediário</div></div>
+    <div class="cover-meta-item"><div class="label">Tempo estimado</div><div class="value">2–4 horas</div></div>
+  </div>
+</div>
+
+<!-- ══ ÍNDICE ══ -->
+<div class="page">
+<div class="toc">
+  <h2>Índice</h2>
+  <div class="toc-item"><span class="toc-num">1</span><span class="toc-title">Visão geral e tecnologias</span></div>
+  <div class="toc-item"><span class="toc-num">2</span><span class="toc-title">Arquitetura da solução</span></div>
+  <div class="toc-item"><span class="toc-num">3</span><span class="toc-title">Passo a passo: do zero ao deploy</span></div>
+  <div class="toc-sub"><span class="toc-num">3.1</span><span class="toc-title">Estrutura de arquivos</span></div>
+  <div class="toc-sub"><span class="toc-num">3.2</span><span class="toc-title">Criando o proxy Vercel</span></div>
+  <div class="toc-sub"><span class="toc-num">3.3</span><span class="toc-title">Configurando o dashboard</span></div>
+  <div class="toc-sub"><span class="toc-num">3.4</span><span class="toc-title">Deploy e variáveis de ambiente</span></div>
+  <div class="toc-sub"><span class="toc-num">3.5</span><span class="toc-title">Renovando o token</span></div>
+  <div class="toc-item"><span class="toc-num">4</span><span class="toc-title">Erros encontrados e soluções</span></div>
+  <div class="toc-item"><span class="toc-num">5</span><span class="toc-title">Métricas implementadas</span></div>
+  <div class="toc-item"><span class="toc-num">6</span><span class="toc-title">Como economizar tokens do Claude</span></div>
+  <div class="toc-item"><span class="toc-num">7</span><span class="toc-title">Próximos passos e melhorias</span></div>
+  <div class="toc-item"><span class="toc-num">8</span><span class="toc-title">Checklist de deploy</span></div>
+</div>
+</div>
+
+<!-- ══ 1. VISÃO GERAL ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">1</span>Visão Geral e Tecnologias</h2>
+  <p class="section-desc">O que foi construído, por quê, e com quais ferramentas.</p>
+
+  <div class="card card-blue">
+    <h4>O que é o projeto</h4>
+    <p>Um webapp privado de análise de Meta Ads que consome a Meta Graph API v21 e exibe campanhas, anúncios, métricas criativas (Hook Rate, Hold Rate, CPC Link) e gráficos de evolução diária — acessível por qualquer pessoa da equipe via URL do Vercel.</p>
+  </div>
+
+  <h3>Stack utilizada</h3>
+  <table>
+    <thead><tr><th>Tecnologia</th><th>Papel</th><th>Por quê</th></tr></thead>
+    <tbody>
+      <tr><td><strong>HTML + Tailwind CDN</strong></td><td>Interface / frontend</td><td>Zero build step, deploy simples</td></tr>
+      <tr><td><strong>Chart.js</strong></td><td>Gráficos</td><td>Leve, fácil via CDN</td></tr>
+      <tr><td><strong>Vercel (Serverless)</strong></td><td>Hospedagem + proxy API</td><td>Gratuito, deploy automático via GitHub</td></tr>
+      <tr><td><strong>Node.js (api/meta.js)</strong></td><td>Proxy server-side</td><td>Protege o token de acesso</td></tr>
+      <tr><td><strong>Meta Graph API v21</strong></td><td>Dados de anúncios</td><td>Fonte oficial dos dados</td></tr>
+      <tr><td><strong>GitHub (privado)</strong></td><td>Controle de versão</td><td>Integração automática com Vercel</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Conta e IDs usados</h3>
+  <div class="card">
+    <p><strong>Ad Account:</strong> <code>act_717055595505474</code> (CA - A Ordem)</p>
+    <p><strong>API Version:</strong> <code>v21.0</code></p>
+    <p><strong>Base URL:</strong> <code>https://graph.facebook.com/v21.0/</code></p>
+    <p style="margin:0"><strong>Repo GitHub:</strong> <code>grsgustao-hash/meta-ads-analyzer</code> (privado, fork)</p>
+  </div>
+</div>
+</div>
+
+<!-- ══ 2. ARQUITETURA ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">2</span>Arquitetura da Solução</h2>
+  <p class="section-desc">Como o fluxo de dados funciona, desde o browser até a Meta API.</p>
+
+  <div class="arch">
+    <div style="text-align:center;margin-bottom:20px;color:#60a5fa;font-weight:bold;font-family:system-ui">FLUXO DE DADOS</div>
+
+    <div style="text-align:center">
+      <span class="box box-blue">🌐 Browser (dashboard.html)</span>
+    </div>
+    <div style="text-align:center;padding:4px 0">
+      <span class="arrow">│ fetch("/api/meta?path=act_.../insights&...")</span>
+    </div>
+    <div style="text-align:center">
+      <span class="box box-yellow">⚡ Vercel Serverless (api/meta.js)</span>
+    </div>
+    <div style="text-align:center;padding:4px 0">
+      <span class="arrow">│ injeta META_ACCESS_TOKEN (env var segura)</span>
+      <br>
+      <span class="arrow">│ fetch("https://graph.facebook.com/v21.0/...")</span>
+    </div>
+    <div style="text-align:center">
+      <span class="box box-green">📊 Meta Graph API v21</span>
+    </div>
+    <div style="text-align:center;padding:4px 0">
+      <span class="arrow">│ retorna JSON com insights</span>
+    </div>
+    <div style="text-align:center">
+      <span class="box box-blue">🖥️ Dashboard renderiza os dados</span>
+    </div>
+  </div>
+
+  <div class="card card-yellow">
+    <h4>⚠️ Por que o proxy é essencial</h4>
+    <p>Se o token for colocado diretamente no <code>dashboard.html</code>, qualquer pessoa que inspecionar o código-fonte do browser consegue roubá-lo e usar sua conta de anúncios. O proxy garante que o token <strong>nunca sai do servidor Vercel</strong>.</p>
+  </div>
+
+  <h3>Arquivos do projeto</h3>
+  <table>
+    <thead><tr><th>Arquivo</th><th>Função</th></tr></thead>
+    <tbody>
+      <tr><td><code>dashboard.html</code></td><td>Interface completa — HTML, CSS e JS em um só arquivo</td></tr>
+      <tr><td><code>api/meta.js</code></td><td>Proxy serverless — recebe requisições do browser e chama a Meta API com o token</td></tr>
+      <tr><td><code>vercel.json</code></td><td>Configuração do Vercel — redireciona / para dashboard.html</td></tr>
+    </tbody>
+  </table>
+</div>
+</div>
+
+<!-- ══ 3. PASSO A PASSO ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">3</span>Passo a Passo: Do Zero ao Deploy</h2>
+  <p class="section-desc">Siga esta sequência para replicar o projeto do zero.</p>
+
+  <h3>3.1 — Estrutura de arquivos</h3>
+  <pre>meu-projeto/
+├── dashboard.html      ← frontend
+├── vercel.json         ← config Vercel
+└── api/
+    └── meta.js         ← proxy serverless</pre>
+
+  <h3>3.2 — Proxy Vercel (api/meta.js)</h3>
+  <p>Este arquivo é o coração da segurança do projeto. Ele intercepta todas as chamadas do browser e injeta o token:</p>
+  <pre>module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  const token = process.env.META_ACCESS_TOKEN;
+  if (!token) return res.status(500).json({ error: { message: 'META_ACCESS_TOKEN not set' } });
+
+  const { path, ...rest } = req.query;
+  if (!path) return res.status(400).json({ error: { message: 'Missing path' } });
+
+  const params = new URLSearchParams({ ...rest, access_token: token });
+  const metaUrl = `https://graph.facebook.com/v21.0/${path}?${params}`;
+
+  try {
+    const resp = await fetch(metaUrl);
+    const data = await resp.json();
+    return res.status(resp.status).json(data);
+  } catch (err) {
+    return res.status(500).json({ error: { message: err.message } });
+  }
+};</pre>
+
+  <h3>3.3 — vercel.json</h3>
+  <pre>{
+  "routes": [{ "src": "/", "dest": "/dashboard.html" }]
+}</pre>
+
+  <h3>3.4 — Helpers no dashboard.html</h3>
+  <p>Toda chamada à API passa pelos helpers abaixo — nunca use a URL da Meta diretamente no browser:</p>
+  <pre>// Constrói URL para o proxy
+function apiUrl(path, params = {}) {
+  return `/api/meta?${new URLSearchParams({ path, ...params })}`;
+}
+
+// Converte URL de paginação da Meta para o proxy
+function toProxy(url) {
+  if (!url.startsWith('http')) return url;
+  const u = new URL(url);
+  u.searchParams.delete('access_token');
+  const path = u.pathname.replace(/^\/v[\d.]+\//, '');
+  return `/api/meta?${new URLSearchParams({ path, ...Object.fromEntries(u.searchParams) })}`;
+}
+
+// Parâmetro de data (preset ou range personalizado)
+function dateObj() {
+  if (currentDateParam.preset) return { date_preset: currentDateParam.preset };
+  return { time_range: JSON.stringify({ since: currentDateParam.since, until: currentDateParam.until }) };
+}</pre>
+</div>
+</div>
+
+<!-- Deploy steps -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h3>3.5 — Deploy no Vercel</h3>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+      <strong>Criar repositório no GitHub (privado)</strong>
+      <p>Crie um repo privado no GitHub. Se for um fork de projeto público, fork → settings → make private. Use o GitHub Desktop para commits se não tiver git configurado no terminal.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+      <strong>Conectar ao Vercel</strong>
+      <p>Acesse <code>vercel.com</code> → New Project → Import Git Repository → selecione seu repo. O Vercel detecta automaticamente que é um projeto estático.</p>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+      <strong>Configurar variável de ambiente</strong>
+      <p>No Vercel: Settings → Environment Variables → adicione:</p>
+      <pre>Name:  META_ACCESS_TOKEN
+Value: EAABsbCS... (seu token Meta)
+Env:   Production, Preview, Development</pre>
+    </div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+      <strong>Fazer Redeploy</strong>
+      <p>Após adicionar a env var, é necessário um novo deploy para ela ser aplicada: Deployments → ⋯ → Redeploy.</p>
+    </div>
+  </div>
+
+  <h3>3.6 — Renovando o token (a cada ~60 dias)</h3>
+
+  <div class="card card-yellow">
+    <h4>⏰ Quando renovar</h4>
+    <p>O dashboard vai mostrar o erro: <em>"Session has expired on..."</em> — é o sinal de que o token precisa ser renovado.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content"><strong>Gerar novo token</strong><p>Acesse <code>developers.facebook.com/tools/explorer</code> → selecione o app → Generate Access Token → marque <code>ads_read</code> + <code>ads_management</code>.</p></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content"><strong>Estender para 60 dias</strong><p>Clique no ícone <strong>"i"</strong> ao lado do token → Open in Access Token Tool → <strong>Extend Access Token</strong>.</p></div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content"><strong>Atualizar no Vercel</strong><p>Vercel → Settings → Environment Variables → editar <code>META_ACCESS_TOKEN</code> → colar novo token → Salvar.</p></div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content"><strong>Redeploy</strong><p>Deployments → ⋯ → Redeploy.</p></div>
+  </div>
+
+  <div class="card card-green">
+    <h4>✅ Solução definitiva: System User Token (não expira)</h4>
+    <p>Para nunca renovar o token, crie um <strong>System User</strong> no Meta Business Manager:</p>
+    <ol style="padding-left:20px;color:#334155">
+      <li style="margin-bottom:6px">Business Manager → Configurações → Usuários → Usuários do sistema</li>
+      <li style="margin-bottom:6px">Criar System User (nome sem espaços, ex: <code>dashboard-api</code>) com papel Admin</li>
+      <li style="margin-bottom:6px">Adicionar o System User ao app Meta em <code>developers.facebook.com</code> → App → Funções do app</li>
+      <li style="margin-bottom:6px">Voltar ao Business Manager → System User → Gerar Token → selecionar o app → marcar permissões</li>
+      <li>Token gerado nunca expira — colocar no Vercel e esquecer</li>
+    </ol>
+  </div>
+</div>
+</div>
+
+<!-- ══ 4. ERROS ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">4</span>Erros Encontrados e Soluções</h2>
+  <p class="section-desc">Todos os erros reais que apareceram durante o desenvolvimento, com causa e solução.</p>
+
+  <div class="error-block">
+    <div class="title">❌ Erro 1 — Campo deprecated na Meta API</div>
+    <div class="msg">(#100) video_3_sec_watched_actions is not valid for fields param</div>
+    <p><strong>Causa:</strong> A Meta deprecou o campo <code>video_3_sec_watched_actions</code> na API v21.</p>
+    <p><strong>Solução:</strong> As visualizações de 3 segundos ficaram dentro do array <code>actions</code> com o tipo <code>video_view</code>:</p>
+    <pre style="margin:8px 0">// ✗ Não funciona mais
+fields: 'video_3_sec_watched_actions,...'
+
+// ✓ Correto
+const v3s = getAction(a.actions, 'video_view');</pre>
+  </div>
+
+  <div class="error-block">
+    <div class="title">❌ Erro 2 — Token expirado no Vercel</div>
+    <div class="msg">Error validating access token: Session has expired on Sunday, 01-Mar-26 13:00:00 PST</div>
+    <p><strong>Causa:</strong> O token Meta curto-prazo expirou (dura ~1–2h sem extensão, até 60d com extensão).</p>
+    <p><strong>Solução:</strong> Gerar novo token em Graph API Explorer → estender para 60 dias → atualizar env var no Vercel → Redeploy.</p>
+    <p><strong>Prevenção:</strong> Usar System User Token (não expira) ou criar lembrete de calendário a cada 55 dias.</p>
+  </div>
+
+  <div class="error-block">
+    <div class="title">❌ Erro 3 — Git push sem permissão</div>
+    <div class="msg">fatal: could not read Username for 'https://github.com': terminal prompts disabled</div>
+    <p><strong>Causa:</strong> Git não estava configurado com credenciais no terminal.</p>
+    <p><strong>Solução:</strong> Usar o <strong>GitHub Desktop</strong> para fazer commits e push sem precisar configurar credenciais no terminal.</p>
+  </div>
+
+  <div class="error-block">
+    <div class="title">❌ Erro 4 — Push para repositório público com token exposto</div>
+    <p><strong>Causa:</strong> O projeto original (<code>mathiaschu/meta-ads-analyzer</code>) era público com 180 stars — enviar código com token seria expô-lo para o mundo.</p>
+    <p><strong>Solução:</strong> Fazer fork do repo para conta própria (<code>grsgustao-hash/meta-ads-analyzer</code>) → tornar privado → só então fazer o push.</p>
+  </div>
+
+  <div class="error-block">
+    <div class="title">❌ Erro 5 — System User Token: "Nenhuma permissão disponível"</div>
+    <p><strong>Causa:</strong> O System User recém-criado não estava adicionado como role em nenhum app Meta. Sem um app associado, não é possível gerar o token.</p>
+    <p><strong>Solução:</strong> Ir em <code>developers.facebook.com</code> → app desejado → Funções do app → adicionar o System User como Admin. Depois, voltar ao Business Manager para gerar o token.</p>
+  </div>
+
+  <div class="error-block">
+    <div class="title">❌ Erro 6 — Nome inválido para System User</div>
+    <div class="msg">Você escolheu um nome de usuário do sistema inválido. Escolha outro.</div>
+    <p><strong>Causa:</strong> "Dashboard API" contém espaço, o que não é permitido no nome de System Users Meta.</p>
+    <p><strong>Solução:</strong> Usar nomes sem espaços: <code>dashboard-api</code>, <code>DashboardAPI</code>, <code>MetaDashboard</code>.</p>
+  </div>
+
+  <div class="success-block">
+    <div class="title">✅ Acerto — Proxy serverless para proteger o token</div>
+    <p>Em vez de expor o token no HTML (acessível por qualquer pessoa via DevTools), toda chamada passa por <code>/api/meta</code> no Vercel, que injeta o token server-side. O browser nunca vê o token.</p>
+  </div>
+
+  <div class="success-block">
+    <div class="title">✅ Acerto — Paginação automática com fetchPages()</div>
+    <p>A função <code>fetchPages(url, max)</code> percorre automaticamente as páginas da Meta API via <code>paging.next</code>, garantindo que todos os dados sejam carregados sem perder registros.</p>
+  </div>
+
+  <div class="success-block">
+    <div class="title">✅ Acerto — toProxy() para paginação segura</div>
+    <p>URLs de paginação da Meta contêm o token embutido (<code>?access_token=...</code>). A função <code>toProxy()</code> remove o token e redireciona a requisição pelo proxy, mantendo a segurança mesmo na paginação.</p>
+  </div>
+</div>
+</div>
+
+<!-- ══ 5. MÉTRICAS ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">5</span>Métricas Implementadas</h2>
+  <p class="section-desc">Todas as métricas disponíveis no dashboard e como são calculadas.</p>
+
+  <table>
+    <thead><tr><th>Métrica</th><th>Cálculo</th><th>Campo API</th><th>Cor (bom/médio/ruim)</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Spend</strong></td><td>Direto da API</td><td><code>spend</code></td><td>—</td></tr>
+      <tr><td><strong>Impressions</strong></td><td>Direto da API</td><td><code>impressions</code></td><td>—</td></tr>
+      <tr><td><strong>CPM</strong></td><td>spend / impressions × 1000</td><td><code>cpm</code></td><td>—</td></tr>
+      <tr><td><strong>CTR (all)</strong></td><td>clicks / impressions × 100</td><td><code>ctr</code></td><td>—</td></tr>
+      <tr><td><strong>CPC Link</strong></td><td>spend / inline_link_clicks</td><td><code>inline_link_clicks</code></td><td>—</td></tr>
+      <tr><td><strong>Hook Rate</strong></td><td>views_3s / impressions × 100</td><td><code>actions[video_view]</code></td><td>🟢 ≥30% 🟡 ≥20% 🔴 &lt;20%</td></tr>
+      <tr><td><strong>Hold Rate</strong></td><td>views_75% / impressions × 100</td><td><code>video_p75_watched_actions</code></td><td>🟢 ≥20% 🟡 ≥12% 🔴 &lt;12%</td></tr>
+      <tr><td><strong>Purchases</strong></td><td>actions[purchase]</td><td><code>actions</code></td><td>—</td></tr>
+      <tr><td><strong>CPA</strong></td><td>spend / purchases</td><td><code>cost_per_action_type</code></td><td>—</td></tr>
+      <tr><td><strong>ROAS</strong></td><td>revenue / spend</td><td><code>purchase_roas</code></td><td>🟢 ≥2x 🟡 ≥1x 🔴 &lt;1x</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card card-blue">
+    <h4>📝 Nota sobre Hook Rate e Hold Rate</h4>
+    <p><strong>Hook Rate</strong> mede o quão atraente é o início do vídeo (quantas pessoas assistiram pelo menos 3 segundos). <strong>Hold Rate</strong> mede o quão engajante é o conteúdo (quantas chegaram a 75% do vídeo). Ambos só fazem sentido para anúncios de vídeo — para imagens, o valor aparece como "—".</p>
+  </div>
+
+  <h3>Campos solicitados à API por nível</h3>
+  <pre>// Nível campanha
+'campaign_name,campaign_id,impressions,reach,frequency,
+ spend,cpm,ctr,clicks,actions,action_values,
+ purchase_roas,cost_per_action_type'
+
+// Nível anúncio
+'ad_name,ad_id,adset_name,adset_id,campaign_name,
+ campaign_id,impressions,spend,cpm,ctr,clicks,
+ inline_link_clicks,actions,action_values,purchase_roas,
+ cost_per_action_type,video_p75_watched_actions'
+
+// Nível dia (time_increment: 1)
+'date_start,spend,impressions,cpm,ctr,clicks,
+ actions,purchase_roas'</pre>
+</div>
+</div>
+
+<!-- ══ 6. TOKENS CLAUDE ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">6</span>Como Economizar Tokens do Claude</h2>
+  <p class="section-desc">Estratégias práticas para reduzir o consumo de contexto em projetos como este.</p>
+
+  <div class="token-tip">
+    <div class="icon">📁</div>
+    <div class="text">
+      <strong>Compartilhe o código completo uma vez, não várias vezes</strong>
+      Em vez de descrever o problema em texto, cole o bloco de código exato com erro. O Claude entende contexto técnico muito melhor com código real do que com descrições em português.
+    </div>
+  </div>
+
+  <div class="token-tip">
+    <div class="icon">🎯</div>
+    <div class="text">
+      <strong>Uma tarefa por vez, com objetivo claro</strong>
+      "Adicione CPC Link, Hook Rate e Hold Rate na tabela de anúncios" é muito mais eficiente do que várias mensagens curtas explorando o que fazer. Quanto mais específico o pedido, menos idas e vindas.
+    </div>
+  </div>
+
+  <div class="token-tip">
+    <div class="icon">🖼️</div>
+    <div class="text">
+      <strong>Use prints/screenshots para mostrar erros de UI</strong>
+      Um print do erro economiza muito mais tokens do que descrever o que aparece na tela. O Claude entende imagens diretamente — use isso a seu favor.
+    </div>
+  </div>
+
+  <div class="token-tip">
+    <div class="icon">🔗</div>
+    <div class="text">
+      <strong>Referencie decisões já tomadas em vez de re-explicar</strong>
+      Diga "usando o padrão do proxy que já criamos" em vez de re-explicar a arquitetura toda vez. Mantenha contexto curto nas mensagens de follow-up.
+    </div>
+  </div>
+
+  <div class="token-tip">
+    <div class="icon">📋</div>
+    <div class="text">
+      <strong>Agrupe múltiplas mudanças em um único pedido</strong>
+      Em vez de pedir uma métrica por mensagem ("adicione CPC Link", depois "agora Hook Rate", depois "agora Hold Rate"), agrupe tudo: "Adicione essas 3 métricas: CPC Link (spend/inline_link_clicks), Hook Rate (3s/impressions×100, verde ≥30%), Hold Rate (75%/impressions×100, verde ≥20%)".
+    </div>
+  </div>
+
+  <div class="token-tip">
+    <div class="icon">⚡</div>
+    <div class="text">
+      <strong>Dê contexto técnico direto, sem rodeios</strong>
+      "O campo video_3_sec_watched_actions retornou erro 100, o que uso no lugar?" é mais eficiente do que "tô tentando fazer uma coisa aqui mas deu problema com o vídeo...". Seja direto e técnico.
+    </div>
+  </div>
+
+  <div class="token-tip">
+    <div class="icon">🔄</div>
+    <div class="text">
+      <strong>Continue conversas existentes ao invés de começar novas</strong>
+      Cada nova conversa perde todo o contexto do projeto. Sempre que possível, continue a mesma sessão. Quando o contexto acabar, o Claude gera um resumo que pode ser colado no início de uma nova sessão.
+    </div>
+  </div>
+
+  <div class="token-tip">
+    <div class="icon">📝</div>
+    <div class="text">
+      <strong>Documente decisões técnicas (como este guia!)</strong>
+      Com documentação, você pode briefar o Claude muito mais rápido em sessões futuras: "Leia este guia e ajude a adicionar X" — sem precisar reexplicar toda a arquitetura do zero.
+    </div>
+  </div>
+
+  <div class="card card-purple" style="margin-top:20px">
+    <h4>📊 Estimativa de tokens por ação</h4>
+    <table style="margin-bottom:0">
+      <thead><tr><th>Ação</th><th>Tokens aprox.</th><th>Eficiência</th></tr></thead>
+      <tbody>
+        <tr><td>Descrever problema em texto longo</td><td>~800–2000</td><td class="tag tag-red">Baixa</td></tr>
+        <tr><td>Colar erro + código relevante</td><td>~300–600</td><td class="tag tag-green">Alta</td></tr>
+        <tr><td>Print do erro (imagem)</td><td>~200–400</td><td class="tag tag-green">Alta</td></tr>
+        <tr><td>Pedido agrupado (várias métricas)</td><td>~500–800</td><td class="tag tag-green">Alta</td></tr>
+        <tr><td>Pedidos separados (uma por vez)</td><td>~1500–3000</td><td class="tag tag-red">Baixa</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<!-- ══ 7. PRÓXIMOS PASSOS ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">7</span>Próximos Passos e Melhorias</h2>
+  <p class="section-desc">Funcionalidades que podem ser adicionadas ao projeto no futuro.</p>
+
+  <h3>Curto prazo (MVP+)</h3>
+  <div class="card card-green">
+    <ul style="padding-left:20px;color:#334155">
+      <li style="margin-bottom:8px"><strong>System User Token:</strong> Criar token não-expirante no Meta Business Manager para nunca precisar renovar manualmente.</li>
+      <li style="margin-bottom:8px"><strong>Exportar para CSV:</strong> Botão para baixar a tabela de anúncios/campanhas como planilha.</li>
+      <li style="margin-bottom:8px"><strong>Filtros na tabela:</strong> Filtrar por campanha específica, por status, ou por range de ROAS.</li>
+      <li>Seletor de contas já implementado nesta versão — ✅</li>
+    </ul>
+  </div>
+
+  <h3>Médio prazo</h3>
+  <div class="card">
+    <ul style="padding-left:20px;color:#334155">
+      <li style="margin-bottom:8px"><strong>Comparação de períodos:</strong> Mostrar variação % de cada métrica vs. período anterior.</li>
+      <li style="margin-bottom:8px"><strong>Nível de conjunto (adset):</strong> Adicionar aba de Conjuntos de Anúncios entre Campanhas e Anúncios.</li>
+      <li style="margin-bottom:8px"><strong>Alertas automáticos:</strong> Notificar por email/Slack quando ROAS cair abaixo de threshold.</li>
+      <li><strong>Múltiplas contas em resumo:</strong> Dashboard consolidado com todas as contas lado a lado.</li>
+    </ul>
+  </div>
+
+  <h3>Longo prazo</h3>
+  <div class="card card-blue">
+    <ul style="padding-left:20px;color:#334155">
+      <li style="margin-bottom:8px"><strong>Backend com banco de dados:</strong> Salvar histórico de dados para análises além dos 90 dias da API.</li>
+      <li style="margin-bottom:8px"><strong>Auth com login:</strong> Adicionar autenticação para que cada usuário veja só as contas dele.</li>
+      <li><strong>Integração com Google Sheets:</strong> Sincronizar dados automaticamente para análises em planilhas.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<!-- ══ 8. CHECKLIST ══ -->
+<div class="page page-break">
+<div class="section-wrap">
+  <h2 class="section-title"><span class="num">8</span>Checklist de Deploy</h2>
+  <p class="section-desc">Use esta lista sempre que for fazer um novo deploy ou renovar o token.</p>
+
+  <h3>Novo projeto do zero</h3>
+  <ul class="checklist">
+    <li>Criar pasta do projeto localmente</li>
+    <li>Criar <code>api/meta.js</code> (proxy serverless)</li>
+    <li>Criar <code>vercel.json</code> com rota raiz</li>
+    <li>Criar <code>dashboard.html</code> com <code>apiUrl()</code> e <code>toProxy()</code></li>
+    <li>Garantir que o token NÃO está no HTML</li>
+    <li>Criar repositório privado no GitHub</li>
+    <li>Fazer commit e push via GitHub Desktop</li>
+    <li>Conectar repo ao Vercel</li>
+    <li>Adicionar <code>META_ACCESS_TOKEN</code> nas env vars do Vercel</li>
+    <li>Fazer Redeploy após adicionar a env var</li>
+    <li>Testar o dashboard na URL do Vercel</li>
+  </ul>
+
+  <h3 style="margin-top:24px">Renovação de token (a cada ~60 dias)</h3>
+  <ul class="checklist">
+    <li>Acessar <code>developers.facebook.com/tools/explorer</code></li>
+    <li>Selecionar app correto no dropdown</li>
+    <li>Gerar token com <code>ads_read</code> + <code>ads_management</code></li>
+    <li>Clicar no "i" → Open in Access Token Tool → Extend (60 dias)</li>
+    <li>Copiar o token long-lived</li>
+    <li>No Vercel: Settings → Environment Variables → editar <code>META_ACCESS_TOKEN</code></li>
+    <li>Salvar nova env var</li>
+    <li>Deployments → ⋯ → Redeploy</li>
+    <li class="warn">Considerar System User Token para evitar essa rotina</li>
+  </ul>
+
+  <h3 style="margin-top:24px">Quando o dashboard mostrar erro</h3>
+  <ul class="checklist">
+    <li>Abrir DevTools (F12) → Console → verificar mensagem de erro</li>
+    <li>Se "Session has expired" → renovar token (ver checklist acima)</li>
+    <li>Se "not valid for fields param" → campo deprecated → pesquisar substituto na doc da Meta</li>
+    <li>Se erro 500 → verificar se <code>META_ACCESS_TOKEN</code> está configurado no Vercel</li>
+    <li>Se dados não carregam → verificar se token tem permissão <code>ads_read</code></li>
+  </ul>
+
+  <div class="footer">
+    <span>Meta Ads Dashboard — Guia de Desenvolvimento</span>
+    <span>Março 2026 · Meta Graph API v21 · Vercel Serverless</span>
+  </div>
+</div>
+</div>
+
+</body>
+</html>
