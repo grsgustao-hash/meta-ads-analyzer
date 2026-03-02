@@ -511,7 +511,7 @@ async function load() {
   $('dashboard').classList.add('hidden');
 
   try {
-    $('loadingMsg').textContent = 'Buscando insights de campanhas…';
+    $('loadingMsg').textContent = 'Buscando insights…';
 
     const campF = ['campaign_name','campaign_id','impressions','reach','frequency','spend','cpm','ctr','clicks','actions','action_values','purchase_roas','cost_per_action_type'].join(',');
     const adF   = ['ad_name','ad_id','adset_name','adset_id','campaign_name','campaign_id','impressions','spend','cpm','ctr','clicks','inline_link_clicks','actions','action_values','purchase_roas','cost_per_action_type','video_p75_watched_actions'].join(',');
@@ -523,7 +523,10 @@ async function load() {
     const adInsURL = apiUrl(`${ACCOUNT}/insights`, { level: 'ad', fields: adF, ...dq, limit: 200 });
     const dailyURL = apiUrl(`${ACCOUNT}/insights`, { level: 'account', fields: dayF, ...dq, time_increment: 1, limit: 100 });
 
-    $('loadingMsg').textContent = 'Buscando dados diários e anúncios…';
+    // Start thumbnail fetch in parallel — don't block main data
+    const thumbPromise = fetchPages(
+      apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{id,thumbnail_url,effective_object_story_id}', limit: 300 })
+    ).catch(() => []);
 
     const [campInsights, adsets, adInsights, daily] = await Promise.all([
       fetchPages(campURL), fetchPages(adsetURL), fetchPages(adInsURL), fetchPages(dailyURL, 365)
@@ -531,21 +534,21 @@ async function load() {
 
     dailyData = daily.sort((a,b) => a.date_start.localeCompare(b.date_start));
 
-    $('loadingMsg').textContent = 'Carregando thumbnails…';
-    try {
-      const adsData = await fetchPages(apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{id,thumbnail_url,effective_object_story_id}', limit: 300 }));
+    // Show dashboard immediately — thumbnails load in background
+    render(campInsights, adsets, adInsights);
+
+    // When thumbnails arrive, update the table silently
+    thumbPromise.then(adsData => {
       adsData.forEach(ad => {
         if (ad.creative?.thumbnail_url) _thumbMap[ad.id] = ad.creative.thumbnail_url;
         if (ad.creative?.id) _creativeIdMap[ad.id] = ad.creative.id;
         const fbUrl = ad.creative?.effective_object_story_id
           ? (() => { const [p,q] = ad.creative.effective_object_story_id.split('_'); return `https://www.facebook.com/${p}/posts/${q}`; })()
           : null;
-        // ig link fetched lazily when drawer opens to avoid slowing initial load
         if (fbUrl) _linkMap[ad.id] = { ig: null, fb: fbUrl };
       });
-    } catch(e) {}
-
-    render(campInsights, adsets, adInsights);
+      if (adsData.length) renderAdTable(allAds);
+    });
   } catch(e) {
     $('loadingState').classList.add('hidden');
     $('errorState').classList.remove('hidden');
