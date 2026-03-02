@@ -98,6 +98,9 @@
     .dk-value { font-size:20px; font-weight:700; color:#ededed; margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .drawer-tab { padding:4px 12px; border-radius:6px; font-size:12px; font-weight:500; color:#555; cursor:pointer; border:none; background:transparent; transition:all .15s; }
     .drawer-tab.active { background:#222; color:#ededed; border:1px solid rgba(255,255,255,.1); }
+    .dk-label { font-size:10px; font-weight:600; color:#444; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px; }
+    .dk-value { font-size:18px; font-weight:700; color:#ededed; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body class="min-h-screen">
@@ -347,6 +350,12 @@
   </div>
 </main>
 
+<!-- Drawer overlay + panel -->
+<div id="adDrawerOverlay" onclick="closeDrawer()"></div>
+<aside id="adDrawer">
+  <div id="drawerInner" style="padding:20px;display:flex;flex-direction:column;gap:14px;"></div>
+</aside>
+
 <script>
 let ACCOUNT = "act_717055595505474";
 
@@ -368,6 +377,7 @@ let chartSpend = null, chartROAS = null, chartDaily = null;
 let allAds = [], allCamps = [], dailyData = [];
 let _thumbMap = {};
 let _linkMap  = {}; // ad_id → { fb, ig }
+let _creativeIdMap = {}; // ad_id → creative_id (para buscar vídeo)
 let currentDateParam = { preset: 'last_7d' };
 let adSortKey = 'spend',   adSortDir   = 'desc';
 let campSortKey = 'spend', campSortDir = 'desc';
@@ -518,7 +528,7 @@ async function load() {
   try {
     // Start thumbnail and daily fetches in background — don't block main render
     const thumbPromise = fetchPages(
-      apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{thumbnail_url,effective_object_story_id,instagram_permalink_url}', limit: 300 })
+      apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{id,thumbnail_url,effective_object_story_id,instagram_permalink_url}', limit: 300 })
     ).catch(() => []);
 
     const dailyPromise = fetchPages(dailyURL, 365).catch(() => []);
@@ -542,6 +552,8 @@ async function load() {
       adsData.forEach(ad => {
         const t  = ad.creative?.thumbnail_url || null;
         if (t) _thumbMap[ad.id] = t;
+        const cid = ad.creative?.id || null;
+        if (cid) _creativeIdMap[ad.id] = cid;
 
         // Build Facebook post URL from effective_object_story_id (format: pageId_postId)
         const storyId = ad.creative?.effective_object_story_id || null;
@@ -804,6 +816,153 @@ function renderAdTable(ads) {
         <td class="text-right font-semibold" style="color:#e2e8f0">${rev>0?brl(rev):'—'}</td>
         <td class="text-right font-semibold" style="color:${lucro!==null?(lucro>=0?'#4ade80':'#f87171'):'#475569'}">${lucro!==null?brl(lucro):'—'}</td>
       </tr>`;
+  });
+
+  // Click no nome do ad → abre drawer com detalhes + transcrição
+  tbody.querySelectorAll('.ad-name-btn').forEach((btn, i) => {
+    btn.addEventListener('click', () => openAdDrawer(sorted[i]));
+  });
+}
+
+// ── DRAWER ──────────────────────────────────────────────────────────────────
+function closeDrawer() {
+  $('adDrawer').classList.remove('open');
+  $('adDrawerOverlay').classList.remove('open');
+}
+
+async function openAdDrawer(ad) {
+  const inner = $('drawerInner');
+  const r      = getRoas(ad.purchase_roas);
+  const rev    = getAction(ad.action_values, 'purchase');
+  const sp     = parseFloat(ad.spend || 0);
+  const lucro  = rev > 0 ? rev - sp : null;
+  const p      = getAction(ad.actions, 'purchase');
+  const cpa    = p > 0 ? sp / p : null;
+  const imp    = parseInt(ad.impressions || 0);
+  const lc     = parseInt(ad.inline_link_clicks || 0);
+  const cpcL   = lc > 0 ? sp / lc : null;
+  const v3s    = getAction(ad.actions, 'video_view');
+  const v75    = getVideoVal(ad.video_p75_watched_actions);
+  const hook   = imp > 0 && v3s > 0 ? (v3s / imp) * 100 : null;
+  const hold   = imp > 0 && v75 > 0 ? (v75 / imp) * 100 : null;
+  const th     = _thumbMap[ad.ad_id];
+  const links  = _linkMap[ad.ad_id];
+  const cid    = _creativeIdMap[ad.ad_id];
+
+  inner.innerHTML = `
+    <!-- Cabeçalho -->
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div style="flex:1;min-width:0">
+        <p style="font-size:10px;color:#444;font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Criativo</p>
+        <p style="font-size:14px;font-weight:600;color:#ededed;line-height:1.4;word-break:break-word">${ad.ad_name}</p>
+        <p style="font-size:11px;color:#555;margin-top:3px">${ad.campaign_name}</p>
+      </div>
+      <button onclick="closeDrawer()" style="background:none;border:none;color:#444;cursor:pointer;font-size:22px;line-height:1;padding:0;flex-shrink:0;transition:color .15s" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#444'">&times;</button>
+    </div>
+
+    <!-- Thumbnail -->
+    ${th ? `<img src="${th}" style="width:100%;border-radius:10px;border:1px solid rgba(255,255,255,.08);display:block" onerror="this.style.display='none'" loading="lazy"/>` : ''}
+
+    <!-- Métricas -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="dk-card"><p class="dk-label">Gasto</p><p class="dk-value">${brl(sp)}</p></div>
+      <div class="dk-card"><p class="dk-label">ROAS</p><p class="dk-value" style="color:${roasColor(r)}">${r > 0 ? fmt(r, 2) + 'x' : '—'}</p></div>
+      <div class="dk-card"><p class="dk-label">Faturamento</p><p class="dk-value">${rev > 0 ? brl(rev) : '—'}</p></div>
+      <div class="dk-card"><p class="dk-label">Lucro</p><p class="dk-value" style="color:${lucro !== null ? (lucro >= 0 ? '#4ade80' : '#f87171') : '#555'}">${lucro !== null ? brl(lucro) : '—'}</p></div>
+      <div class="dk-card"><p class="dk-label">Compras</p><p class="dk-value">${p > 0 ? fmt(p, 0) : '—'}</p></div>
+      <div class="dk-card"><p class="dk-label">CPA</p><p class="dk-value">${cpa ? brl(cpa) : '—'}</p></div>
+      <div class="dk-card"><p class="dk-label">CPC Link</p><p class="dk-value">${cpcL ? brl(cpcL) : '—'}</p></div>
+      <div class="dk-card"><p class="dk-label">CTR</p><p class="dk-value">${fmt(parseFloat(ad.ctr || 0), 2)}%</p></div>
+      <div class="dk-card"><p class="dk-label">Hook Rate</p><p class="dk-value" style="color:${hook ? (hook >= 30 ? '#4ade80' : hook >= 20 ? '#fbbf24' : '#f87171') : '#555'}">${hook ? fmt(hook, 1) + '%' : '—'}</p></div>
+      <div class="dk-card"><p class="dk-label">Hold Rate</p><p class="dk-value" style="color:${hold ? (hold >= 20 ? '#4ade80' : hold >= 12 ? '#fbbf24' : '#f87171') : '#555'}">${hold ? fmt(hold, 1) + '%' : '—'}</p></div>
+    </div>
+
+    <!-- Links FB / IG -->
+    ${(links?.fb || links?.ig) ? `
+    <div style="display:flex;gap:8px">
+      ${links?.fb ? `<a href="${links.fb}" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.08);color:#1877f2;font-size:12px;font-weight:600;text-decoration:none;background:#141414;transition:border-color .15s" onmouseover="this.style.borderColor='#1877f2'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">📘 Facebook</a>` : ''}
+      ${links?.ig ? `<a href="${links.ig}" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,.08);color:#e1306c;font-size:12px;font-weight:600;text-decoration:none;background:#141414;transition:border-color .15s" onmouseover="this.style.borderColor='#e1306c'" onmouseout="this.style.borderColor='rgba(255,255,255,.08)'">📷 Instagram</a>` : ''}
+    </div>` : ''}
+
+    <!-- Transcrição -->
+    <div>
+      ${cid ? `
+      <button id="btnTranscribe" style="width:100%;padding:13px;background:#ededed;color:#111;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onclick="transcreverAd('${cid}')">
+        🎙 Transcrever Áudio do Anúncio
+      </button>` : `
+      <p style="text-align:center;font-size:11px;color:#444;padding:8px">Thumbnail ainda carregando — reabra o drawer em instantes</p>`}
+      <div id="transcribeResult" style="display:none;margin-top:12px;background:#0d0d0d;border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:#ccc;white-space:pre-wrap;word-break:break-word;"></div>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button id="btnCopyTranscript" onclick="copiarTranscricao()" style="display:none;flex:1;padding:8px;background:transparent;border:1px solid rgba(255,255,255,.08);border-radius:7px;color:#555;font-size:11px;font-weight:600;cursor:pointer;transition:color .15s,border-color .15s" onmouseover="this.style.color='#ededed';this.style.borderColor='rgba(255,255,255,.2)'" onmouseout="this.style.color='#555';this.style.borderColor='rgba(255,255,255,.08)'">📋 Copiar</button>
+      </div>
+    </div>
+  `;
+
+  $('adDrawer').classList.add('open');
+  $('adDrawerOverlay').classList.add('open');
+}
+
+async function transcreverAd(creativeId) {
+  const btn    = $('btnTranscribe');
+  const result = $('transcribeResult');
+  const copyBtn= $('btnCopyTranscript');
+
+  const spinner = `<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.2);border-top-color:#111;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>`;
+
+  btn.disabled = true;
+  btn.innerHTML = spinner + 'Buscando vídeo...';
+  result.style.display = 'none';
+  result.style.color = '#ccc';
+  copyBtn.style.display = 'none';
+
+  try {
+    // 1. Buscar video_id do criativo via /api/meta
+    const cResp = await fetch(apiUrl(creativeId, { fields: 'video_id,object_story_spec' }));
+    const cData = await cResp.json();
+    const videoId = cData.video_id || cData.object_story_spec?.video_data?.video_id;
+
+    if (!videoId) throw new Error('Este criativo não contém vídeo — é um anúncio de imagem.');
+
+    btn.innerHTML = spinner + 'Obtendo URL do vídeo...';
+
+    // 2. Buscar URL de download do vídeo
+    const vResp = await fetch(apiUrl(videoId, { fields: 'source' }));
+    const vData = await vResp.json();
+    if (!vData.source) throw new Error('Não foi possível obter a URL do vídeo.');
+
+    btn.innerHTML = spinner + 'Transcrevendo com Whisper...';
+
+    // 3. Enviar URL para o backend transcrever
+    const tResp = await fetch('/api/transcrever', {
+      method : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body   : JSON.stringify({ videoUrl: vData.source }),
+    });
+    const tData = await tResp.json();
+    if (!tResp.ok) throw new Error(tData.error || `Erro ${tResp.status}`);
+
+    result.textContent    = tData.text;
+    result.style.display  = 'block';
+    result.style.color    = '#ccc';
+    copyBtn.style.display = 'block';
+    btn.innerHTML = '✓ Concluído — clique para refazer';
+    btn.disabled  = false;
+
+  } catch (err) {
+    result.textContent   = '⚠️ ' + err.message;
+    result.style.display = 'block';
+    result.style.color   = '#f87171';
+    btn.innerHTML = '🎙 Tentar novamente';
+    btn.disabled  = false;
+  }
+}
+
+function copiarTranscricao() {
+  const txt = $('transcribeResult')?.textContent || '';
+  navigator.clipboard.writeText(txt).then(() => {
+    const b = $('btnCopyTranscript');
+    b.textContent = '✓ Copiado!';
+    setTimeout(() => { b.textContent = '📋 Copiar'; }, 2000);
   });
 }
 
