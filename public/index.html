@@ -887,7 +887,7 @@ async function openAdDrawer(ad) {
     <!-- Transcrição -->
     <div>
       ${cid ? `
-      <button id="btnTranscribe" style="width:100%;padding:13px;background:#ededed;color:#111;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onclick="transcreverAd('${cid}')">
+      <button id="btnTranscribe" style="width:100%;padding:13px;background:#ededed;color:#111;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onclick="transcreverAd('${cid}','${ad.ad_id}')">
         🎙 Transcrever Áudio do Anúncio
       </button>` : `
       <p style="text-align:center;font-size:11px;color:#444;padding:8px">Thumbnail ainda carregando — reabra o drawer em instantes</p>`}
