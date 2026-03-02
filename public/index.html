@@ -378,6 +378,7 @@ let allAds = [], allCamps = [], dailyData = [];
 let _thumbMap = {};
 let _linkMap  = {}; // ad_id → { fb, ig }
 let _creativeIdMap = {}; // ad_id → creative_id (para buscar vídeo)
+let _storyMap      = {}; // ad_id → effective_object_story_id
 let currentDateParam = { preset: 'last_7d' };
 let adSortKey = 'spend',   adSortDir   = 'desc';
 let campSortKey = 'spend', campSortDir = 'desc';
@@ -557,6 +558,7 @@ async function load() {
 
         // Build Facebook post URL from effective_object_story_id (format: pageId_postId)
         const storyId = ad.creative?.effective_object_story_id || null;
+        if (storyId) _storyMap[ad.id] = storyId;
         let fb = null;
         if (storyId) {
           const parts = storyId.split('_');
@@ -847,7 +849,8 @@ async function openAdDrawer(ad) {
   const hold   = imp > 0 && v75 > 0 ? (v75 / imp) * 100 : null;
   const th     = _thumbMap[ad.ad_id];
   const links  = _linkMap[ad.ad_id];
-  const cid    = _creativeIdMap[ad.ad_id];
+  const cid     = _creativeIdMap[ad.ad_id];
+  const storyId = _storyMap[ad.ad_id] || '';
 
   inner.innerHTML = `
     <!-- Cabeçalho -->
@@ -887,7 +890,7 @@ async function openAdDrawer(ad) {
     <!-- Transcrição -->
     <div>
       ${cid ? `
-      <button id="btnTranscribe" style="width:100%;padding:13px;background:#ededed;color:#111;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onclick="transcreverAd('${cid}','${ad.ad_id}')">
+      <button id="btnTranscribe" style="width:100%;padding:13px;background:#ededed;color:#111;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onclick="transcreverAd('${cid}','${ad.ad_id}','${storyId}')">
         🎙 Transcrever Áudio do Anúncio
       </button>` : `
       <p style="text-align:center;font-size:11px;color:#444;padding:8px">Thumbnail ainda carregando — reabra o drawer em instantes</p>`}
@@ -902,7 +905,7 @@ async function openAdDrawer(ad) {
   $('adDrawerOverlay').classList.add('open');
 }
 
-async function transcreverAd(creativeId, adId) {
+async function transcreverAd(creativeId, adId, storyId) {
   const btn    = $('btnTranscribe');
   const result = $('transcribeResult');
   const copyBtn= $('btnCopyTranscript');
@@ -924,33 +927,46 @@ async function transcreverAd(creativeId, adId) {
       || cData.object_story_spec?.link_data?.child_attachments?.[0]?.video_id
       || cData.asset_feed_spec?.videos?.[0]?.video_id;
 
-    if (!videoId) throw new Error('Este criativo não contém vídeo — é um anúncio de imagem.');
-
-    btn.innerHTML = spinner + 'Obtendo URL do vídeo...';
-
-    // 2. Tentar buscar source direto no video_id
     let videoUrl = null;
-    const vResp = await fetch(apiUrl(videoId, { fields: 'source,format' }));
-    const vData = await vResp.json();
 
-    // source direto
-    if (vData.source) videoUrl = vData.source;
+    if (videoId) {
+      btn.innerHTML = spinner + 'Obtendo URL do vídeo...';
 
-    // fallback: array format (diferentes qualidades)
-    if (!videoUrl && vData.format?.length) {
-      const best = vData.format.find(f => f.source) || vData.format[0];
-      if (best?.source) videoUrl = best.source;
+      // 2. Tentar buscar source direto no video_id
+      const vResp = await fetch(apiUrl(videoId, { fields: 'source,format' }));
+      const vData = await vResp.json();
+
+      // source direto
+      if (vData.source) videoUrl = vData.source;
+
+      // fallback: array format (diferentes qualidades)
+      if (!videoUrl && vData.format?.length) {
+        const best = vData.format.find(f => f.source) || vData.format[0];
+        if (best?.source) videoUrl = best.source;
+      }
+
+      // fallback 2: buscar via advideos da conta
+      if (!videoUrl) {
+        const avResp = await fetch(apiUrl(`${ACCOUNT}/advideos`, { ids: videoId, fields: 'source' }));
+        const avData = await avResp.json();
+        const avItem = avData?.data?.[0] || avData?.[videoId];
+        if (avItem?.source) videoUrl = avItem.source;
+      }
     }
 
-    // fallback 2: buscar via advideos da conta
+    // fallback 3: buscar via effective_object_story_id → post attachments
+    if (!videoUrl && storyId) {
+      btn.innerHTML = spinner + 'Buscando via post da página...';
+      const sResp = await fetch(apiUrl(storyId, { fields: 'attachments{media_type,media}' }));
+      const sData = await sResp.json();
+      const attach = sData.attachments?.data?.find(a => a.media_type === 'video');
+      if (attach?.media?.source) videoUrl = attach.media.source;
+    }
+
     if (!videoUrl) {
-      const avResp = await fetch(apiUrl(`${ACCOUNT}/advideos`, { ids: videoId, fields: 'source' }));
-      const avData = await avResp.json();
-      const avItem = avData?.data?.[0] || avData?.[videoId];
-      if (avItem?.source) videoUrl = avItem.source;
+      if (!videoId && !storyId) throw new Error('Este criativo não contém vídeo — é um anúncio de imagem.');
+      throw new Error('Vídeo não acessível via API (permissão insuficiente ou vídeo expirado).');
     }
-
-    if (!videoUrl) throw new Error('Vídeo não acessível via API (permissão insuficiente ou vídeo expirado).');
 
     btn.innerHTML = spinner + 'Transcrevendo com Whisper...';
 
@@ -958,7 +974,7 @@ async function transcreverAd(creativeId, adId) {
     const tResp = await fetch('/api/transcrever', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ videoUrl: vData.source }),
+      body   : JSON.stringify({ videoUrl }),
     });
     const tData = await tResp.json();
     if (!tResp.ok) throw new Error(tData.error || `Erro ${tResp.status}`);
