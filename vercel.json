@@ -1,5 +1,11 @@
 {
   "routes": [
-    { "src": "/", "dest": "/dashboard.html" }
-  ]
+    { "src": "/",            "dest": "/dashboard.html" },
+    { "src": "/transcrever", "dest": "/transcrever.html" }
+  ],
+  "functions": {
+    "api/transcrever.js": {
+      "maxDuration": 60
+    }
+  }
 }
