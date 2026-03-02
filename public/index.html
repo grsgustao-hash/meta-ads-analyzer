@@ -850,7 +850,6 @@ async function openAdDrawer(ad) {
   const th     = _thumbMap[ad.ad_id];
   const links  = _linkMap[ad.ad_id];
   const cid     = _creativeIdMap[ad.ad_id];
-  const storyId = _storyMap[ad.ad_id] || '';
 
   inner.innerHTML = `
     <!-- Cabeçalho -->
@@ -890,7 +889,7 @@ async function openAdDrawer(ad) {
     <!-- Transcrição -->
     <div>
       ${cid ? `
-      <button id="btnTranscribe" style="width:100%;padding:13px;background:#ededed;color:#111;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onclick="transcreverAd('${cid}','${ad.ad_id}','${storyId}')">
+      <button id="btnTranscribe" style="width:100%;padding:13px;background:#ededed;color:#111;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity .15s" onmouseover="this.style.opacity='.88'" onmouseout="this.style.opacity='1'" onclick="transcreverAd('${cid}','${ad.ad_id}')">
         🎙 Transcrever Áudio do Anúncio
       </button>` : `
       <p style="text-align:center;font-size:11px;color:#444;padding:8px">Thumbnail ainda carregando — reabra o drawer em instantes</p>`}
@@ -905,7 +904,9 @@ async function openAdDrawer(ad) {
   $('adDrawerOverlay').classList.add('open');
 }
 
-async function transcreverAd(creativeId, adId, storyId) {
+async function transcreverAd(creativeId, adId) {
+  // Look up storyId dynamically — _storyMap is populated async after thumbs load
+  const storyId = _storyMap[adId] || '';
   const btn    = $('btnTranscribe');
   const result = $('transcribeResult');
   const copyBtn= $('btnCopyTranscript');
@@ -957,15 +958,28 @@ async function transcreverAd(creativeId, adId, storyId) {
     // fallback 3: buscar via effective_object_story_id → post attachments
     if (!videoUrl && storyId) {
       btn.innerHTML = spinner + 'Buscando via post da página...';
-      const sResp = await fetch(apiUrl(storyId, { fields: 'attachments{media_type,media}' }));
+      const sResp = await fetch(apiUrl(storyId, { fields: 'attachments{media_type,type,media,subattachments{media_type,type,media}}' }));
       const sData = await sResp.json();
-      const attach = sData.attachments?.data?.find(a => a.media_type === 'video');
-      if (attach?.media?.source) videoUrl = attach.media.source;
+      console.log('[transcrever] storyId:', storyId, '| attachments:', JSON.stringify(sData));
+
+      // Flatten top-level + subattachments into one list
+      const allAttach = [];
+      (sData.attachments?.data || []).forEach(a => {
+        allAttach.push(a);
+        (a.subattachments?.data || []).forEach(sub => allAttach.push(sub));
+      });
+
+      for (const a of allAttach) {
+        if (a.media?.source) { videoUrl = a.media.source; break; }
+      }
     }
 
     if (!videoUrl) {
-      if (!videoId && !storyId) throw new Error('Este criativo não contém vídeo — é um anúncio de imagem.');
-      throw new Error('Vídeo não acessível via API (permissão insuficiente ou vídeo expirado).');
+      const why = !videoId && !storyId ? 'anúncio sem vídeo detectado'
+        : !storyId ? 'token sem permissão video_management'
+        : `story_id ${storyId} sem source acessível`;
+      console.warn('[transcrever] sem videoUrl. videoId:', videoId, '| storyId:', storyId);
+      throw new Error(`Vídeo não acessível via API (${why}).`);
     }
 
     btn.innerHTML = spinner + 'Transcrevendo com Whisper...';
