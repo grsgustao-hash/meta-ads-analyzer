@@ -366,6 +366,8 @@
               <th class="text-right sortable-th" data-sort="purchases" style="min-width:75px">Purchases <span class="sort-icon">↕</span></th>
               <th class="text-right sortable-th" data-sort="cpa" style="min-width:80px">CPA <span class="sort-icon">↕</span></th>
               <th class="text-right sortable-th" data-sort="roas" style="min-width:65px">ROAS <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="faturamento" style="min-width:95px">Faturamento <span class="sort-icon">↕</span></th>
+              <th class="text-right sortable-th" data-sort="lucro" style="min-width:85px">Lucro <span class="sort-icon">↕</span></th>
             </tr></thead>
             <tbody id="adTableBody"></tbody>
           </table>
@@ -436,6 +438,8 @@ function getSortVal(item, key) {
     case 'cpc_link': { const lc=parseInt(item.inline_link_clicks||0); return lc>0 ? parseFloat(item.spend)/lc : Infinity; }
     case 'hook_rate': { const v3s=getAction(item.actions,'video_view'); return imp>0&&v3s>0?(v3s/imp)*100:-1; }
     case 'hold_rate': { const v75=getVideoVal(item.video_p75_watched_actions); return imp>0&&v75>0?(v75/imp)*100:-1; }
+    case 'faturamento': return getAction(item.action_values,'purchase');
+    case 'lucro': return getAction(item.action_values,'purchase') - parseFloat(item.spend||0);
     case 'name': return (item.campaign_name||item.ad_name||'').toLowerCase();
     case 'adset': return (item.adset_name||'').toLowerCase();
     default: return 0;
@@ -794,9 +798,12 @@ function renderAdTable(ads) {
   if (!sorted.length) { empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
   sorted.forEach(a=>{
-    const p  =getAction(a.actions,'purchase');
-    const cp =p>0?parseFloat(a.spend)/p:null;
-    const r  =getRoas(a.purchase_roas);
+    const p   = getAction(a.actions,'purchase');
+    const rev = getAction(a.action_values,'purchase');
+    const sp  = parseFloat(a.spend||0);
+    const cp  = p>0 ? sp/p : null;
+    const r   = getRoas(a.purchase_roas);
+    const lucro = rev > 0 ? rev - sp : null;
     const imp      = parseInt(a.impressions||0);
     const lc       = parseInt(a.inline_link_clicks||0);
     const cpcLink  = lc>0 ? parseFloat(a.spend)/lc : null;
@@ -828,6 +835,8 @@ function renderAdTable(ads) {
         <td class="text-right">${p>0?fmt(p,0):'—'}</td>
         <td class="text-right">${cp?brl(cp):'—'}</td>
         <td class="text-right font-semibold" style="color:${roasColor(r)}">${r>0?fmt(r,2)+'x':'—'}</td>
+        <td class="text-right font-semibold" style="color:#e2e8f0">${rev>0?brl(rev):'—'}</td>
+        <td class="text-right font-semibold" style="color:${lucro!==null?(lucro>=0?'#4ade80':'#f87171'):'#475569'}">${lucro!==null?brl(lucro):'—'}</td>
       </tr>`;
   });
 }
