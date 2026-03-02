@@ -92,6 +92,20 @@
     .chart-sel { background:#0d0e1a; border:1px solid rgba(255,255,255,.1); border-radius:8px; color:#94a3b8; font-size:12px; padding:5px 10px; outline:none; cursor:pointer; }
     .chart-sel:focus { border-color:#3b82f6; }
 
+    /* ── Ad Detail Drawer ──────────────────────────────────────────── */
+    #adDrawerOverlay { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:98; display:none; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px); }
+    #adDrawerOverlay.open { display:block; }
+    #adDrawer { position:fixed; top:0; right:0; bottom:0; width:480px; max-width:96vw; background:#0c0d18; border-left:1px solid rgba(255,255,255,.08); z-index:99; transform:translateX(100%); transition:transform .35s cubic-bezier(.4,0,.2,1); overflow-y:auto; display:flex; flex-direction:column; }
+    #adDrawer.open { transform:translateX(0); }
+    .dk-card { background:#111422; border:1px solid rgba(255,255,255,.07); border-radius:12px; padding:12px 14px; flex:1; min-width:0; }
+    .dk-label { font-size:9px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#3b4a63; }
+    .dk-value { font-size:19px; font-weight:800; color:#f1f5f9; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .drawer-tab { padding:5px 13px; border-radius:7px; font-size:12px; font-weight:500; color:#475569; cursor:pointer; border:none; background:transparent; transition:all .15s; white-space:nowrap; }
+    .drawer-tab.active { background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff; box-shadow:0 2px 10px rgba(124,58,237,.3); }
+    .drawer-tab:not(.active):hover { background:rgba(255,255,255,.05); color:#e2e8f0; }
+    .ad-name-btn { background:none; border:none; cursor:pointer; padding:0; text-align:left; color:#e2e8f0; font-weight:600; font-size:12px; display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color .15s; }
+    .ad-name-btn:hover { color:#60a5fa; }
+
     /* Account picker */
     #accountPicker { position:relative; }
     #accountDropdown { display:none; position:absolute; left:0; top:calc(100% + 8px); background:#111422; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); padding:12px; min-width:240px; max-width:320px; z-index:50; max-height:300px; overflow-y:auto; }
@@ -756,7 +770,7 @@ function renderAdTable(ads) {
     const platformBadges = (igBadge||fbBadge) ? `<div style="display:flex;gap:3px;margin-top:4px">${igBadge}${fbBadge}</div>` : '';
     tbody.innerHTML += `
       <tr>
-        <td style="max-width:240px"><div class="flex items-center gap-2">${thumbEl}<div style="min-width:0"><span class="block truncate font-medium" style="color:#e2e8f0" title="${a.ad_name}">${truncate(a.ad_name,36)}</span><span class="block truncate text-xs" style="color:#475569;max-width:180px">${truncate(a.campaign_name,34)}</span>${platformBadges}</div></div></td>
+        <td style="max-width:240px"><div class="flex items-center gap-2">${thumbEl}<div style="min-width:0"><button class="ad-name-btn" onclick="openAdDrawer('${a.ad_id}')" title="${a.ad_name} — clique para detalhes">${truncate(a.ad_name,36)}</button><span class="block truncate text-xs" style="color:#475569;max-width:180px">${truncate(a.campaign_name,34)}</span>${platformBadges}</div></div></td>
         <td style="max-width:160px"><span class="block truncate" title="${a.adset_name}">${truncate(a.adset_name,26)}</span></td>
         <td class="text-center">${statusBadge(false)}</td>
         <td class="text-right font-semibold" style="color:#e2e8f0">${brl(parseFloat(a.spend))}</td>
@@ -858,6 +872,128 @@ document.querySelectorAll('#adTableHead [data-sort]').forEach(th => {
   });
 });
 
+// ── AD DETAIL DRAWER ──────────────────────────────────────────────────────────
+let _drawerDailyData = [];
+let chartDrawer = null;
+let _drawerMetric = 'spend';
+
+const DRAWER_METRICS = {
+  spend: { label:'Spend Diário (R$)',    color:'#3b82f6', fn:d=>parseFloat(d.spend||0),                                             fmt:v=>'R$'+fmtK(v)   },
+  roas:  { label:'ROAS Diário',          color:'#4ade80', fn:d=>getRoas(d.purchase_roas),                                            fmt:v=>fmt(v,2)+'x'   },
+  cpc:   { label:'CPC Link Diário (R$)', color:'#a78bfa', fn:d=>{ const lc=parseInt(d.inline_link_clicks||0); return lc>0?parseFloat(d.spend)/lc:0; }, fmt:v=>'R$'+fmt(v,2) },
+  lucro: { label:'Lucro Diário (R$)',    color:'#2dd4bf', fn:d=>getAction(d.action_values,'purchase')-parseFloat(d.spend||0),        fmt:v=>'R$'+fmtK(v)   },
+};
+
+function renderDrawerChart(metric) {
+  if (!_drawerDailyData.length) return;
+  _drawerMetric = metric;
+  const cfg    = DRAWER_METRICS[metric];
+  const labels = _drawerDailyData.map(d=>{ const [,m,day]=d.date_start.split('-'); return `${day}/${m}`; });
+  const data   = _drawerDailyData.map(cfg.fn);
+
+  document.querySelectorAll('.drawer-tab').forEach(t => t.classList.toggle('active', t.dataset.dtab===metric));
+
+  if (chartDrawer) chartDrawer.destroy();
+  chartDrawer = new Chart($('drawerChart').getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets:[{ label:cfg.label, data, borderColor:cfg.color, backgroundColor:cfg.color+'22', fill:true, tension:0.4, pointRadius:data.length>20?0:3, pointHoverRadius:5, borderWidth:2 }] },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ backgroundColor:'#1e2130', borderColor:'rgba(255,255,255,.1)', borderWidth:1, titleColor:'#94a3b8', bodyColor:'#e2e8f0', callbacks:{ label:ctx=>` ${cfg.fmt(ctx.raw)}` } }
+      },
+      scales:{
+        x:{ grid:{color:'rgba(255,255,255,.03)'}, ticks:{color:'#475569',font:{size:9},maxTicksLimit:10} },
+        y:{ grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#475569',font:{size:9},callback:cfg.fmt} }
+      }
+    }
+  });
+}
+
+async function openAdDrawer(adId) {
+  const ad = allAds.find(a => a.ad_id === adId);
+  if (!ad) return;
+  const links = _linkMap[ad.ad_id];
+  const th    = _thumbMap[ad.ad_id];
+
+  // Fill header info
+  $('drawerAdName').textContent   = ad.ad_name;
+  $('drawerCampName').textContent = ad.campaign_name;
+  $('drawerAdset').textContent    = `Conjunto: ${ad.adset_name||'—'}`;
+
+  // Thumbnail
+  $('drawerThumb').innerHTML = th
+    ? `<img src="${th}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML=''">`
+    : `<svg width="24" height="24" style="color:#334155" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>`;
+
+  // Platform buttons
+  $('drawerPlatformLinks').innerHTML = [
+    links?.ig ? `<a href="${links.ig}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:700;color:#fff;text-decoration:none;background:linear-gradient(135deg,#833ab4,#e1306c,#fd1d1d)"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg> Instagram</a>` : '',
+    links?.fb ? `<a href="${links.fb}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font-size:13px;font-weight:700;color:#fff;text-decoration:none;background:#1877f2"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg> Facebook</a>` : '',
+  ].join('');
+
+  // KPIs from aggregate
+  const p     = getAction(ad.actions, 'purchase');
+  const rev   = getAction(ad.action_values, 'purchase');
+  const sp    = parseFloat(ad.spend||0);
+  const r     = getRoas(ad.purchase_roas);
+  const lucro = rev - sp;
+  $('dk-spend').textContent = brl(sp);
+  $('dk-roas').textContent  = r > 0 ? fmt(r,2)+'x' : '—';
+  $('dk-roas').style.color  = roasColor(r);
+  $('dk-cpa').textContent   = p > 0 ? brl(sp/p) : '—';
+  $('dk-lucro').textContent = rev > 0 ? brl(lucro) : '—';
+  $('dk-lucro').style.color = lucro >= 0 ? '#4ade80' : '#f87171';
+
+  // Open panel
+  $('adDrawer').classList.add('open');
+  $('adDrawerOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+
+  // Reset chart area
+  $('drawerChartLoader').classList.remove('hidden');
+  $('drawerChartArea').classList.add('hidden');
+  $('drawerChartEmpty').classList.add('hidden');
+  if (chartDrawer) { chartDrawer.destroy(); chartDrawer = null; }
+  _drawerDailyData = [];
+
+  // Fetch daily breakdown for this ad
+  try {
+    const dayF = ['date_start','spend','inline_link_clicks','purchase_roas','actions','action_values'].join(',');
+    const url  = apiUrl(`${ad.ad_id}/insights`, { fields: dayF, time_increment: 1, ...dateObj(), limit: 100 });
+    _drawerDailyData = (await fetchPages(url, 365)).sort((a,b) => a.date_start.localeCompare(b.date_start));
+    $('drawerChartLoader').classList.add('hidden');
+    if (!_drawerDailyData.length) {
+      $('drawerChartEmpty').classList.remove('hidden');
+    } else {
+      $('drawerChartNote').textContent = `${_drawerDailyData.length} dias no período`;
+      $('drawerChartArea').classList.remove('hidden');
+      renderDrawerChart(_drawerMetric);
+    }
+  } catch(e) {
+    $('drawerChartLoader').classList.add('hidden');
+    $('drawerChartEmpty').textContent = `Erro ao carregar: ${e.message}`;
+    $('drawerChartEmpty').classList.remove('hidden');
+  }
+}
+
+function closeAdDrawer() {
+  $('adDrawer').classList.remove('open');
+  $('adDrawerOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  if (chartDrawer) { chartDrawer.destroy(); chartDrawer = null; }
+  _drawerDailyData = [];
+}
+
+$('drawerClose').addEventListener('click', closeAdDrawer);
+$('adDrawerOverlay').addEventListener('click', closeAdDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAdDrawer(); });
+document.querySelectorAll('.drawer-tab').forEach(btn => {
+  btn.addEventListener('click', () => renderDrawerChart(btn.dataset.dtab));
+});
+
 // ── ACCOUNT PICKER ────────────────────────────────────────────────────────────
 $('accountToggle').addEventListener('click', e => {
   e.stopPropagation();
@@ -915,5 +1051,72 @@ async function loadAccounts() {
   load();
 })();
 </script>
+
+<!-- ─── AD DETAIL DRAWER ─── -->
+<div id="adDrawerOverlay"></div>
+<div id="adDrawer">
+
+  <!-- Header -->
+  <div class="p-5" style="border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0">
+    <div class="flex items-center gap-3 mb-4">
+      <button id="drawerClose" title="Fechar" style="background:rgba(255,255,255,.06);border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;color:#94a3b8">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+      <div style="min-width:0">
+        <p class="text-xs font-semibold uppercase tracking-wider" style="color:#3b4a63;letter-spacing:.12em">Criativo</p>
+        <h2 class="font-bold text-white mt-0.5" id="drawerAdName" style="font-size:13px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</h2>
+      </div>
+    </div>
+
+    <!-- Thumb + info + platform buttons -->
+    <div class="flex gap-4 items-start mb-5">
+      <div id="drawerThumb" style="width:64px;height:64px;border-radius:10px;overflow:hidden;flex-shrink:0;background:#1e2130;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.07)"></div>
+      <div style="min-width:0;flex:1">
+        <p class="text-xs mb-0.5 truncate" style="color:#64748b" id="drawerCampName">—</p>
+        <p class="text-xs mb-3 truncate" style="color:#475569" id="drawerAdset">—</p>
+        <div class="flex gap-2 flex-wrap" id="drawerPlatformLinks"></div>
+      </div>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="grid grid-cols-4 gap-2">
+      <div class="dk-card" style="border-top:2px solid #3b82f6">
+        <div class="dk-label">Spent</div><div class="dk-value" id="dk-spend">—</div>
+      </div>
+      <div class="dk-card" style="border-top:2px solid #4ade80">
+        <div class="dk-label">ROAS</div><div class="dk-value" id="dk-roas">—</div>
+      </div>
+      <div class="dk-card" style="border-top:2px solid #fb923c">
+        <div class="dk-label">CPA</div><div class="dk-value" id="dk-cpa">—</div>
+      </div>
+      <div class="dk-card" style="border-top:2px solid #2dd4bf">
+        <div class="dk-label">Lucro</div><div class="dk-value" id="dk-lucro">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart area -->
+  <div class="p-5 flex-1">
+    <!-- Loading -->
+    <div id="drawerChartLoader" class="flex items-center justify-center py-12 gap-3">
+      <div class="spinner" style="width:22px;height:22px;border-width:2px"></div>
+      <span class="text-xs" style="color:#475569">Carregando dados diários…</span>
+    </div>
+    <!-- Chart -->
+    <div id="drawerChartArea" class="hidden">
+      <div class="flex gap-1 flex-wrap mb-4" style="background:#131520;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:4px;width:fit-content">
+        <button class="drawer-tab active" data-dtab="spend">Spend</button>
+        <button class="drawer-tab" data-dtab="roas">ROAS</button>
+        <button class="drawer-tab" data-dtab="cpc">CPC Link</button>
+        <button class="drawer-tab" data-dtab="lucro">Lucro</button>
+      </div>
+      <div style="position:relative;height:240px"><canvas id="drawerChart"></canvas></div>
+      <p class="text-xs mt-2 text-center" style="color:#334155" id="drawerChartNote"></p>
+    </div>
+    <!-- Empty -->
+    <div id="drawerChartEmpty" class="hidden text-center py-12 text-xs" style="color:#475569">Sem dados diários para o período selecionado.</div>
+  </div>
+
+</div>
 </body>
 </html>
