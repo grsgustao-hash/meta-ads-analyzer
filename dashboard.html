@@ -312,7 +312,7 @@
       <div id="tabAds" class="hidden space-y-3">
         <div class="relative max-w-sm">
           <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style="color:#444" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          <input id="adSearch" type="text" placeholder="Buscar anúncio, conjunto ou campanha…"
+          <input id="adSearch" type="text" placeholder="Buscar por nome do anúncio…"
             class="w-full pl-9 pr-4 py-2 text-sm rounded-lg" style="background:#141414;border:1px solid rgba(255,255,255,.08);color:#ccc;outline:none"/>
         </div>
         <div class="dark-table">
@@ -823,9 +823,13 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 $('dailyMetric').addEventListener('change',e=>renderDailyChart(e.target.value));
 
 // ── SEARCH ───────────────────────────────────────────────────────────────────
+function filterAds(q) {
+  if (!q) return allAds;
+  const s = q.toLowerCase();
+  return allAds.filter(a => a.ad_name?.toLowerCase().includes(s));
+}
 $('adSearch').addEventListener('input',e=>{
-  const q=e.target.value.toLowerCase();
-  renderAdTable(!q?allAds:allAds.filter(a=>a.ad_name?.toLowerCase().includes(q)||a.adset_name?.toLowerCase().includes(q)||a.campaign_name?.toLowerCase().includes(q)));
+  renderAdTable(filterAds(e.target.value));
 });
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
@@ -882,13 +886,7 @@ document.querySelectorAll('#adTableHead [data-sort]').forEach(th => {
     if (key === adSortKey) { adSortDir = adSortDir==='desc'?'asc':'desc'; }
     else { adSortKey = key; adSortDir = 'desc'; }
     updateSortUI('adTableHead', adSortKey, adSortDir);
-    const q = $('adSearch').value.toLowerCase();
-    const filtered = !q ? allAds : allAds.filter(a =>
-      a.ad_name?.toLowerCase().includes(q) ||
-      a.adset_name?.toLowerCase().includes(q) ||
-      a.campaign_name?.toLowerCase().includes(q)
-    );
-    renderAdTable(filtered);
+    renderAdTable(filterAds($('adSearch').value));
   });
 });
 
