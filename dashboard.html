@@ -7,152 +7,146 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#080910; color:#fff; }
-    .spinner { border:3px solid rgba(255,255,255,.08); border-top:3px solid #3b82f6; border-radius:50%; width:36px; height:36px; animation:spin .8s linear infinite; }
+    /* ── Base ──────────────────────────────────────────────────── */
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; background:#0c0c0c; color:#ededed; }
+    .spinner { border:2px solid rgba(255,255,255,.06); border-top:2px solid rgba(255,255,255,.4); border-radius:50%; width:32px; height:32px; animation:spin .8s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* ── Cards ──────────────────────────────────────────────────── */
+    /* ── KPI Cards ──────────────────────────────────────────────── */
     .metric-card {
-      border-radius:16px; padding:20px 22px; position:relative; overflow:hidden;
-      min-height:122px; display:flex; flex-direction:column;
-      background:#111422; border:1px solid rgba(255,255,255,.07);
-      transition:border-color .2s ease, transform .15s ease, box-shadow .2s ease;
+      border-radius:12px; padding:18px 20px; position:relative;
+      min-height:110px; display:flex; flex-direction:column; justify-content:space-between;
+      background:#141414; border:1px solid rgba(255,255,255,.08);
+      transition:border-color .2s, background .2s;
     }
-    .metric-card:hover { border-color:rgba(255,255,255,.15); transform:translateY(-2px); box-shadow:0 12px 40px rgba(0,0,0,.35); }
-    .metric-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:var(--c,#3b82f6); }
-    .icon-wrap { width:34px; height:34px; border-radius:10px; background:rgba(var(--cr,96,165,250),.12); border:1px solid rgba(var(--cr,96,165,250),.18); display:flex; align-items:center; justify-content:center; color:var(--c,#60a5fa); margin-bottom:14px; flex-shrink:0; }
-    .icon-wrap svg { width:16px; height:16px; }
-    .metric-card .label { font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#475569; }
-    .metric-card .value { font-size:clamp(16px,2.2vw,26px); font-weight:800; line-height:1.1; margin-top:6px; color:#f1f5f9; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .metric-card .sub   { font-size:11px; color:#475569; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
-    .card-blue   { --c:#60a5fa; --cr:96,165,250; }
-    .card-indigo { --c:#818cf8; --cr:129,140,248; }
-    .card-teal   { --c:#2dd4bf; --cr:45,212,191; }
-    .card-purple { --c:#a78bfa; --cr:167,139,250; }
-    .card-dark   { --c:#64748b; --cr:100,116,139; }
-    .card-green  { --c:#4ade80; --cr:74,222,128; }
-    .card-orange { --c:#fb923c; --cr:251,146,60; }
-    .card-rose   { --c:#fb7185; --cr:251,113,133; }
-    .card-cyan   { --c:#22d3ee; --cr:34,211,238; }
+    .metric-card:hover { border-color:rgba(255,255,255,.16); background:#181818; }
+    .metric-card .label { font-size:11px; font-weight:500; color:#555; letter-spacing:.02em; }
+    .metric-card .value { font-size:clamp(18px,2.4vw,28px); font-weight:700; line-height:1; color:#ededed; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:10px; }
+    .metric-card .sub   { font-size:11px; color:#444; margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .icon-wrap { width:28px; height:28px; border-radius:8px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center; color:#555; flex-shrink:0; }
+    .icon-wrap svg { width:14px; height:14px; }
 
     /* ── Section labels ─────────────────────────────────────────── */
-    .section-label { font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:#3b4a63; display:flex; align-items:center; gap:8px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,.05); }
-    .section-label svg { color:#3b82f6; opacity:.5; }
+    .section-label { font-size:11px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#444; display:flex; align-items:center; gap:8px; margin-bottom:16px; }
+    .section-label svg { opacity:.4; }
 
-    /* Chart container */
-    .chart-box { background:#111422; border:1px solid rgba(255,255,255,.06); border-radius:16px; padding:24px; }
-    .chart-wrap { position:relative; height:260px; }
+    /* ── Chart container ─────────────────────────────────────────── */
+    .chart-box { background:#141414; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:20px; }
+    .chart-wrap { position:relative; height:240px; }
 
-    /* Table */
-    .dark-table { background:#111422; border:1px solid rgba(255,255,255,.06); border-radius:16px; overflow:hidden; }
+    /* ── Tables ──────────────────────────────────────────────────── */
+    .dark-table { background:#141414; border:1px solid rgba(255,255,255,.08); border-radius:12px; overflow:hidden; }
     .dark-table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .dark-table thead tr { background:#0f1020; }
-    .dark-table th { color:#3b4a63; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:11px 14px; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,.06); }
-    .dark-table td { padding:11px 14px; font-size:12px; border-bottom:1px solid rgba(255,255,255,.04); color:#94a3b8; white-space:nowrap; }
+    .dark-table thead tr { background:#111; }
+    .dark-table th { color:#444; font-size:10px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; padding:10px 14px; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,.06); }
+    .dark-table td { padding:11px 14px; font-size:12px; border-bottom:1px solid rgba(255,255,255,.04); color:#888; white-space:nowrap; }
     .dark-table tr:last-child td { border-bottom:none; }
-    .dark-table tr:hover td { background:rgba(59,130,246,.04); }
+    .dark-table tr:hover td { background:rgba(255,255,255,.02); color:#bbb; }
     .sortable-th { cursor:pointer; transition:color .15s; }
-    .sortable-th:hover { color:#60a5fa !important; }
-    .sort-icon { display:inline-block; margin-left:3px; opacity:.2; font-size:10px; vertical-align:middle; transition:opacity .15s; }
-    .sortable-th.sort-active { color:#60a5fa !important; }
+    .sortable-th:hover { color:#aaa !important; }
+    .sort-icon { display:inline-block; margin-left:3px; opacity:.25; font-size:10px; vertical-align:middle; }
+    .sortable-th.sort-active { color:#ededed !important; }
     .sortable-th.sort-active .sort-icon { opacity:1; }
 
-    /* Tabs */
-    .tab-btn { padding:6px 18px; border-radius:8px; font-size:13px; font-weight:500; color:#475569; cursor:pointer; transition:all .15s; border:none; background:transparent; }
-    .tab-btn.active { background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff; box-shadow:0 2px 12px rgba(124,58,237,.3); }
-    .tab-btn:not(.active):hover { background:rgba(255,255,255,.05); color:#e2e8f0; }
+    /* ── Tabs ────────────────────────────────────────────────────── */
+    .tab-btn { padding:5px 16px; border-radius:7px; font-size:12px; font-weight:500; color:#555; cursor:pointer; transition:all .15s; border:none; background:transparent; }
+    .tab-btn.active { background:#222; color:#ededed; border:1px solid rgba(255,255,255,.1); }
+    .tab-btn:not(.active):hover { color:#aaa; }
 
-    /* Date picker */
-    #datePicker { position:relative; }
-    #dateDropdown { display:none; position:absolute; right:0; top:calc(100% + 8px); background:#111422; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); padding:20px; width:310px; z-index:50; }
-    #dateDropdown.open { display:block; }
-    .preset-btn { display:block; width:100%; text-align:left; padding:7px 12px; border-radius:8px; font-size:13px; color:#94a3b8; cursor:pointer; border:none; background:transparent; transition:background .1s; }
-    .preset-btn:hover { background:rgba(255,255,255,.06); color:#e2e8f0; }
-    .preset-btn.active { background:rgba(59,130,246,.2); color:#60a5fa; font-weight:600; }
-    .date-input { width:100%; border:1px solid rgba(255,255,255,.1); border-radius:8px; padding:7px 10px; font-size:13px; color:#e2e8f0; outline:none; background:#0d0e1a; }
-    .date-input:focus { border-color:#3b82f6; }
-    .date-input::-webkit-calendar-picker-indicator { filter:invert(1); opacity:.5; }
+    /* ── Date / Account dropdowns ────────────────────────────────── */
+    #datePicker, #accountPicker { position:relative; }
+    #dateDropdown, #accountDropdown { display:none; position:absolute; top:calc(100% + 6px); background:#141414; border:1px solid rgba(255,255,255,.1); border-radius:12px; box-shadow:0 24px 48px rgba(0,0,0,.7); padding:16px; z-index:50; }
+    #dateDropdown { right:0; width:300px; }
+    #dateDropdown.open, #accountDropdown.open { display:block; }
+    #accountDropdown { left:0; min-width:220px; max-width:300px; max-height:280px; overflow-y:auto; padding:10px; }
+    .preset-btn { display:block; width:100%; text-align:left; padding:6px 10px; border-radius:7px; font-size:13px; color:#666; cursor:pointer; border:none; background:transparent; transition:background .1s; }
+    .preset-btn:hover { background:rgba(255,255,255,.05); color:#ccc; }
+    .preset-btn.active { background:rgba(255,255,255,.08); color:#ededed; font-weight:600; }
+    .date-input { width:100%; border:1px solid rgba(255,255,255,.1); border-radius:7px; padding:6px 10px; font-size:13px; color:#ccc; outline:none; background:#1a1a1a; }
+    .date-input:focus { border-color:rgba(255,255,255,.3); }
+    .date-input::-webkit-calendar-picker-indicator { filter:invert(1); opacity:.4; }
+    .account-btn { display:block; width:100%; text-align:left; padding:7px 10px; border-radius:7px; font-size:13px; color:#666; cursor:pointer; border:none; background:transparent; transition:background .1s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .account-btn:hover { background:rgba(255,255,255,.05); color:#ccc; }
+    .account-btn.active { background:rgba(255,255,255,.08); color:#ededed; font-weight:600; }
 
-    /* Badges */
-    .badge-active   { background:rgba(34,197,94,.15); color:#4ade80; border:1px solid rgba(34,197,94,.2); }
-    .badge-learning { background:rgba(234,179,8,.15);  color:#fbbf24; border:1px solid rgba(234,179,8,.2); }
-    .badge-paused   { background:rgba(100,116,139,.15); color:#94a3b8; border:1px solid rgba(100,116,139,.2); }
+    /* ── Badges ──────────────────────────────────────────────────── */
+    .badge-active   { background:rgba(255,255,255,.06); color:#aaa; border:1px solid rgba(255,255,255,.1); }
+    .badge-learning { background:rgba(255,255,255,.04); color:#888; border:1px solid rgba(255,255,255,.08); }
 
-    /* Ad thumb */
-    .ad-thumb { width:36px; height:36px; object-fit:cover; border-radius:6px; flex-shrink:0; }
-    .ad-thumb-ph { width:36px; height:36px; border-radius:6px; background:#1e2130; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    /* ── Ad thumb ────────────────────────────────────────────────── */
+    .ad-thumb { width:34px; height:34px; object-fit:cover; border-radius:6px; flex-shrink:0; }
+    .ad-thumb-ph { width:34px; height:34px; border-radius:6px; background:#1a1a1a; border:1px solid rgba(255,255,255,.06); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width:6px; height:6px; }
+    /* ── Scrollbar ───────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width:4px; height:4px; }
     ::-webkit-scrollbar-track { background:transparent; }
-    ::-webkit-scrollbar-thumb { background:#2a2d3e; border-radius:3px; }
+    ::-webkit-scrollbar-thumb { background:#222; border-radius:2px; }
 
-    /* Chart metric selector */
-    .chart-sel { background:#0d0e1a; border:1px solid rgba(255,255,255,.1); border-radius:8px; color:#94a3b8; font-size:12px; padding:5px 10px; outline:none; cursor:pointer; }
-    .chart-sel:focus { border-color:#3b82f6; }
+    /* ── Misc ────────────────────────────────────────────────────── */
+    .chart-sel { background:#1a1a1a; border:1px solid rgba(255,255,255,.1); border-radius:7px; color:#888; font-size:12px; padding:4px 9px; outline:none; cursor:pointer; }
+    .chart-sel:focus { border-color:rgba(255,255,255,.25); }
+    .ad-name-btn { background:none; border:none; cursor:pointer; padding:0; text-align:left; color:#ccc; font-weight:500; font-size:12px; display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color .15s; }
+    .ad-name-btn:hover { color:#fff; }
 
-    .ad-name-btn { background:none; border:none; cursor:pointer; padding:0; text-align:left; color:#e2e8f0; font-weight:600; font-size:12px; display:block; width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; transition:color .15s; }
-    .ad-name-btn:hover { color:#60a5fa; }
-
-    /* Account picker */
-    #accountPicker { position:relative; }
-    #accountDropdown { display:none; position:absolute; left:0; top:calc(100% + 8px); background:#111422; border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.6); padding:12px; min-width:240px; max-width:320px; z-index:50; max-height:300px; overflow-y:auto; }
-    #accountDropdown.open { display:block; }
-    .account-btn { display:block; width:100%; text-align:left; padding:8px 12px; border-radius:8px; font-size:13px; color:#94a3b8; cursor:pointer; border:none; background:transparent; transition:background .1s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .account-btn:hover { background:rgba(255,255,255,.06); color:#e2e8f0; }
-    .account-btn.active { background:rgba(59,130,246,.2); color:#60a5fa; font-weight:600; }
+    /* ── Drawer ──────────────────────────────────────────────────── */
+    #adDrawerOverlay { position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:98; display:none; backdrop-filter:blur(4px); }
+    #adDrawerOverlay.open { display:block; }
+    #adDrawer { position:fixed; top:0; right:0; bottom:0; width:460px; max-width:96vw; background:#0f0f0f; border-left:1px solid rgba(255,255,255,.08); z-index:99; transform:translateX(100%); transition:transform .3s cubic-bezier(.4,0,.2,1); overflow-y:auto; display:flex; flex-direction:column; }
+    #adDrawer.open { transform:translateX(0); }
+    .dk-card { background:#141414; border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:14px 16px; flex:1; min-width:0; }
+    .dk-label { font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:#444; }
+    .dk-value { font-size:20px; font-weight:700; color:#ededed; margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .drawer-tab { padding:4px 12px; border-radius:6px; font-size:12px; font-weight:500; color:#555; cursor:pointer; border:none; background:transparent; transition:all .15s; }
+    .drawer-tab.active { background:#222; color:#ededed; border:1px solid rgba(255,255,255,.1); }
   </style>
 </head>
 <body class="min-h-screen">
 
 <!-- ─── HEADER ─── -->
-<header class="px-6 py-3.5 sticky top-0 z-20" style="background:rgba(8,9,16,.92);border-bottom:1px solid rgba(255,255,255,.06);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)">
-  <!-- top gradient accent line -->
-  <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,#3b82f6 30%,#8b5cf6 60%,transparent 100%);opacity:.6"></div>
+<header class="px-6 py-3 sticky top-0 z-20" style="background:rgba(12,12,12,.95);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)">
   <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
     <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">
-        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+      <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:#1a1a1a;border:1px solid rgba(255,255,255,.1)">
+        <svg class="w-4 h-4" style="color:#888" fill="currentColor" viewBox="0 0 24 24">
           <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
         </svg>
       </div>
       <div>
-        <h1 class="text-sm font-bold text-white leading-none" id="headerTitle" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Meta Ads</h1>
-        <p class="text-xs mt-0.5" style="color:#3b4a63;font-weight:500" id="headerDateSub">Meta Ads Dashboard</p>
+        <h1 class="text-sm font-semibold leading-none" style="color:#ededed" id="headerTitle">Meta Ads</h1>
+        <p class="text-xs mt-0.5" style="color:#444;font-weight:400" id="headerDateSub">Dashboard</p>
       </div>
     </div>
     <div class="flex items-center gap-2">
       <!-- Account Picker -->
       <div id="accountPicker">
-        <button id="accountToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-all" style="background:#111422;border:1px solid rgba(255,255,255,.08);color:#94a3b8;hover:border-color:rgba(255,255,255,.15)">
-          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+        <button id="accountToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-1.5 transition-all" style="background:#141414;border:1px solid rgba(255,255,255,.08);color:#888">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
           </svg>
-          <span id="accountLabel">Carregando…</span>
-          <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span id="accountLabel" style="font-size:13px">Carregando…</span>
+          <svg class="w-3 h-3 flex-shrink-0 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
         <div id="accountDropdown">
-          <p class="text-xs font-semibold uppercase tracking-wider mb-2 px-2" style="color:#475569">Conta de anúncios</p>
-          <div id="accountList"><p class="text-xs px-2 py-2" style="color:#475569">Carregando contas…</p></div>
+          <p class="text-xs font-semibold uppercase tracking-wider mb-2 px-1" style="color:#444">Contas</p>
+          <div id="accountList"><p class="text-xs px-1 py-1" style="color:#444">Carregando…</p></div>
         </div>
       </div>
       <!-- Date Picker -->
       <div id="datePicker">
-        <button id="dateToggle" class="flex items-center gap-2 text-sm rounded-lg px-3 py-2 font-medium transition-all" style="background:#111422;border:1px solid rgba(255,255,255,.08);color:#94a3b8">
-          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button id="dateToggle" class="flex items-center gap-2 rounded-lg px-3 py-1.5 transition-all" style="background:#141414;border:1px solid rgba(255,255,255,.08);color:#888">
+          <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          <span id="dateLabel">Últimos 7 dias</span>
-          <svg class="w-3.5 h-3.5 flex-shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span id="dateLabel" style="font-size:13px">Últimos 7 dias</span>
+          <svg class="w-3 h-3 flex-shrink-0 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
         </button>
         <div id="dateDropdown">
-          <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#475569">Período rápido</p>
-          <div class="space-y-0.5 mb-4">
+          <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#444">Período</p>
+          <div class="space-y-0.5 mb-3">
             <button class="preset-btn active" data-preset="last_7d">Últimos 7 dias</button>
             <button class="preset-btn" data-preset="last_14d">Últimos 14 dias</button>
             <button class="preset-btn" data-preset="last_30d">Últimos 30 dias</button>
@@ -161,17 +155,17 @@
             <button class="preset-btn" data-preset="last_month">Mês passado</button>
             <button class="preset-btn" data-preset="this_year">Este ano</button>
           </div>
-          <div style="border-top:1px solid rgba(255,255,255,.07)" class="mb-4"></div>
-          <p class="text-xs font-semibold uppercase tracking-wider mb-3" style="color:#475569">Período personalizado</p>
+          <div style="border-top:1px solid rgba(255,255,255,.06)" class="mb-3"></div>
+          <p class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#444">Personalizado</p>
           <div class="grid grid-cols-2 gap-2 mb-3">
-            <div><label class="text-xs mb-1 block" style="color:#64748b">De</label><input type="date" id="dateFrom" class="date-input"/></div>
-            <div><label class="text-xs mb-1 block" style="color:#64748b">Até</label><input type="date" id="dateTo" class="date-input"/></div>
+            <div><label class="text-xs mb-1 block" style="color:#555">De</label><input type="date" id="dateFrom" class="date-input"/></div>
+            <div><label class="text-xs mb-1 block" style="color:#555">Até</label><input type="date" id="dateTo" class="date-input"/></div>
           </div>
-          <button id="applyCustom" class="w-full bg-blue-600 text-white text-sm py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">Aplicar período</button>
+          <button id="applyCustom" class="w-full text-sm py-1.5 rounded-lg font-medium transition-colors" style="background:#222;border:1px solid rgba(255,255,255,.1);color:#ccc">Aplicar período</button>
         </div>
       </div>
-      <button id="refreshBtn" class="text-white text-sm px-4 py-2 rounded-lg flex items-center gap-1.5 font-medium transition-all" style="background:linear-gradient(135deg,#2563eb,#7c3aed);box-shadow:0 0 0 1px rgba(124,58,237,.3)">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <button id="refreshBtn" class="text-sm px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-medium transition-all" style="background:#1a1a1a;border:1px solid rgba(255,255,255,.1);color:#ccc">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
         </svg>
         Atualizar
@@ -198,126 +192,98 @@
   <!-- Dashboard -->
   <div id="dashboard" class="hidden space-y-8">
 
-    <!-- ── INVESTIMENTO & ALCANCE ── -->
-    <div>
-      <div class="section-label">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        Investimento & Alcance
+    <!-- ── KPIs ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="metric-card">
+        <span class="label">Gasto</span>
+        <div><div class="value" id="kSpend">—</div><div class="sub" id="kSpendSub">—</div></div>
       </div>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="metric-card card-blue">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"/></svg></div>
-          <div><span class="label">Amount Spent</span><div class="value" id="kSpend">—</div><div class="sub" id="kSpendSub">—</div></div>
-        </div>
-        <div class="metric-card card-indigo">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></div>
-          <div><span class="label">Impressions</span><div class="value" id="kImpressions">—</div><div class="sub" id="kImpSub">—</div></div>
-        </div>
-        <div class="metric-card card-dark">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div>
-          <div><span class="label">Reach (Accounts Center)</span><div class="value" id="kReach">—</div><div class="sub" id="kReachSub">—</div></div>
-        </div>
-        <div class="metric-card card-dark">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
-          <div><span class="label">Frequency</span><div class="value" id="kFrequency">—</div><div class="sub">por Accounts Center account</div></div>
-        </div>
+      <div class="metric-card">
+        <span class="label">Faturamento</span>
+        <div><div class="value" id="kRevenue">—</div><div class="sub">receita atribuída</div></div>
       </div>
-    </div>
-
-    <!-- ── PERFORMANCE DE CLIQUES ── -->
-    <div>
-      <div class="section-label">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-        Performance de Cliques
+      <div class="metric-card">
+        <span class="label">ROAS</span>
+        <div><div class="value" id="kROAS">—</div><div class="sub" id="kROASSub">—</div></div>
       </div>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="metric-card card-blue">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5"/></svg></div>
-          <div><span class="label">Clicks (all)</span><div class="value" id="kClicks">—</div><div class="sub" id="kClicksSub">—</div></div>
-        </div>
-        <div class="metric-card card-teal">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg></div>
-          <div><span class="label">CTR (all)</span><div class="value" id="kCTR">—</div><div class="sub" id="kCTRSub">—</div></div>
-        </div>
-        <div class="metric-card card-indigo">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg></div>
-          <div><span class="label">CPM</span><div class="value" id="kCPM">—</div><div class="sub">por mil impressões</div></div>
-        </div>
-        <div class="metric-card card-purple">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1"/></svg></div>
-          <div><span class="label">CPC (all)</span><div class="value" id="kCPC">—</div><div class="sub">custo por clique</div></div>
-        </div>
+      <div class="metric-card">
+        <span class="label">CPA</span>
+        <div><div class="value" id="kCPA">—</div><div class="sub">por conversão</div></div>
+      </div>
+      <div class="metric-card">
+        <span class="label">Impressões</span>
+        <div><div class="value" id="kImpressions">—</div><div class="sub" id="kImpSub">—</div></div>
+      </div>
+      <div class="metric-card">
+        <span class="label">Compras</span>
+        <div><div class="value" id="kPurchases">—</div><div class="sub" id="kPurchasesSub">—</div></div>
+      </div>
+      <div class="metric-card">
+        <span class="label">CPM</span>
+        <div><div class="value" id="kCPM">—</div><div class="sub">por mil impressões</div></div>
+      </div>
+      <div class="metric-card">
+        <span class="label">CTR</span>
+        <div><div class="value" id="kCTR">—</div><div class="sub" id="kCTRSub">—</div></div>
       </div>
     </div>
 
-    <!-- ── CONVERSÕES ── -->
-    <div>
-      <div class="section-label">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        Conversões
+    <!-- ── KPIs linha 2 (alcance/frequencia/cliques/cpc) ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="metric-card">
+        <span class="label">Alcance</span>
+        <div><div class="value" id="kReach">—</div><div class="sub" id="kReachSub">—</div></div>
       </div>
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="metric-card card-green">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-          <div><span class="label">Purchases</span><div class="value" id="kPurchases">—</div><div class="sub" id="kPurchasesSub">—</div></div>
-        </div>
-        <div class="metric-card card-orange">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg></div>
-          <div><span class="label">Cost per Purchase</span><div class="value" id="kCPA">—</div><div class="sub">por conversão</div></div>
-        </div>
-        <div class="metric-card card-cyan">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg></div>
-          <div><span class="label">Purchase ROAS</span><div class="value" id="kROAS">—</div><div class="sub" id="kROASSub">—</div></div>
-        </div>
-        <div class="metric-card card-purple">
-          <div class="icon-wrap"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-          <div><span class="label">Purchase Value</span><div class="value" id="kRevenue">—</div><div class="sub">receita atribuída</div></div>
-        </div>
+      <div class="metric-card">
+        <span class="label">Frequência</span>
+        <div><div class="value" id="kFrequency">—</div><div class="sub">por conta</div></div>
+      </div>
+      <div class="metric-card">
+        <span class="label">Cliques</span>
+        <div><div class="value" id="kClicks">—</div><div class="sub" id="kClicksSub">—</div></div>
+      </div>
+      <div class="metric-card">
+        <span class="label">CPC</span>
+        <div><div class="value" id="kCPC">—</div><div class="sub">custo por clique</div></div>
       </div>
     </div>
 
     <!-- ── EVOLUÇÃO DIÁRIA ── -->
-    <div>
-      <div class="section-label">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        Evolução Diária
+    <div class="chart-box">
+      <div class="flex items-center justify-between mb-4">
+        <p class="text-sm font-medium" style="color:#888" id="dailyChartLabel">Gasto Diário</p>
+        <select id="dailyMetric" class="chart-sel">
+          <option value="spend">Gasto</option>
+          <option value="cpm">CPM</option>
+          <option value="ctr">CTR (%)</option>
+          <option value="purchases">Compras</option>
+          <option value="roas">ROAS</option>
+        </select>
       </div>
-      <div class="chart-box">
-        <div class="flex items-center justify-between mb-5">
-          <p class="text-sm font-medium" style="color:#94a3b8" id="dailyChartLabel">Spend Diário</p>
-          <select id="dailyMetric" class="chart-sel">
-            <option value="spend">Spend Diário</option>
-            <option value="cpm">CPM Diário</option>
-            <option value="ctr">CTR Diário (%)</option>
-            <option value="purchases">Purchases Diário</option>
-            <option value="roas">ROAS Diário</option>
-          </select>
-        </div>
-        <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
-        <p class="text-xs mt-3 text-center" style="color:#334155" id="dailyChartNote">—</p>
-      </div>
+      <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+      <p class="text-xs mt-3 text-center" style="color:#333" id="dailyChartNote">—</p>
     </div>
 
     <!-- ── CAMPANHAS / ANÚNCIOS ── -->
     <div>
-      <div class="flex items-center justify-between mb-4">
-        <div class="flex items-center gap-1" style="background:#131520;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:4px">
-          <button class="tab-btn active" data-tab="campaigns">📊 Campanhas</button>
-          <button class="tab-btn" data-tab="ads">🎨 Anúncios</button>
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-1" style="background:#111;border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:3px">
+          <button class="tab-btn active" data-tab="campaigns">Campanhas</button>
+          <button class="tab-btn" data-tab="ads">Anúncios</button>
         </div>
-        <span class="text-xs" style="color:#475569" id="tabNote">—</span>
+        <span class="text-xs" style="color:#444" id="tabNote">—</span>
       </div>
 
       <!-- Tab: Campanhas -->
       <div id="tabCampaigns">
         <!-- Mini charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
           <div class="chart-box">
-            <p class="text-xs font-semibold mb-4" style="color:#64748b;text-transform:uppercase;letter-spacing:.08em">Amount Spent — Top 10</p>
+            <p class="text-xs font-medium mb-4" style="color:#555;text-transform:uppercase;letter-spacing:.06em">Gasto — Top 10</p>
             <div class="chart-wrap"><canvas id="spendChart"></canvas></div>
           </div>
           <div class="chart-box">
-            <p class="text-xs font-semibold mb-4" style="color:#64748b;text-transform:uppercase;letter-spacing:.08em">Purchase ROAS — Top 10</p>
+            <p class="text-xs font-medium mb-4" style="color:#555;text-transform:uppercase;letter-spacing:.06em">ROAS — Top 10</p>
             <div class="chart-wrap"><canvas id="roasChart"></canvas></div>
           </div>
         </div>
@@ -345,9 +311,9 @@
       <!-- Tab: Anúncios -->
       <div id="tabAds" class="hidden space-y-3">
         <div class="relative max-w-sm">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style="color:#475569" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style="color:#444" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           <input id="adSearch" type="text" placeholder="Buscar anúncio, conjunto ou campanha…"
-            class="w-full pl-9 pr-4 py-2 text-sm rounded-lg" style="background:#131520;border:1px solid rgba(255,255,255,.07);color:#e2e8f0;outline:none"/>
+            class="w-full pl-9 pr-4 py-2 text-sm rounded-lg" style="background:#141414;border:1px solid rgba(255,255,255,.08);color:#ccc;outline:none"/>
         </div>
         <div class="dark-table">
           <div class="dark-table-scroll">
