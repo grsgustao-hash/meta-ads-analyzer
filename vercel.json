@@ -1,6 +1,7 @@
 {
   "routes": [
-    { "src": "/",            "dest": "/dashboard.html" },
-    { "src": "/transcrever", "dest": "/transcrever.html" }
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/transcrever", "dest": "/transcrever.html" },
+    { "src": "/",           "dest": "/dashboard.html" }
   ]
 }
