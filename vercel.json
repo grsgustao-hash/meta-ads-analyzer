@@ -1,6 +1,5 @@
 {
   "rewrites": [
-    { "source": "/transcrever", "destination": "/transcrever.html" },
-    { "source": "/",            "destination": "/dashboard.html" }
+    { "source": "/transcrever", "destination": "/transcrever.html" }
   ]
 }
