@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Transcrever Anúncio — Whisper</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0c0c0c;
+      color: #ededed;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      background: #141414;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px;
+      padding: 32px;
+      width: 100%;
+      max-width: 560px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    h1 { font-size: 18px; font-weight: 600; color: #fff; }
+    p.sub { font-size: 12px; color: #555; margin-top: 4px; }
+
+    .drop-zone {
+      border: 1px dashed rgba(255,255,255,.15);
+      border-radius: 10px;
+      padding: 36px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      font-size: 13px;
+      color: #555;
+    }
+    .drop-zone:hover { border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.02); }
+    .drop-zone.has-file { border-color: rgba(255,255,255,.25); color: #bbb; }
+    input[type="file"] { display: none; }
+
+    button {
+      background: #ededed;
+      color: #111;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    button:disabled { opacity: .35; cursor: not-allowed; }
+    button:hover:not(:disabled) { opacity: .85; }
+
+    .progress { display: none; align-items: center; gap: 10px; font-size: 12px; color: #666; }
+    .progress.show { display: flex; }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.1);
+      border-top-color: #ededed;
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .result {
+      display: none;
+      background: #0f0f0f;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 10px;
+      padding: 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #ccc;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .result.show { display: block; }
+
+    .error {
+      color: #f87171;
+      font-size: 12px;
+      display: none;
+    }
+    .error.show { display: block; }
+
+    .copy-btn {
+      background: transparent;
+      color: #555;
+      border: 1px solid rgba(255,255,255,.08);
+      font-size: 12px;
+      padding: 6px 14px;
+      align-self: flex-end;
+      display: none;
+    }
+    .copy-btn.show { display: block; }
+    .copy-btn:hover { color: #ededed; border-color: rgba(255,255,255,.2); }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div>
+    <h1>Transcrever Anúncio</h1>
+    <p class="sub">Envie um mp4 — o áudio é transcrito via Whisper (pt-BR)</p>
+  </div>
+
+  <!-- Área de upload -->
+  <label class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept="video/mp4,audio/*" />
+    <span id="dropLabel">Clique para escolher ou arraste um arquivo mp4</span>
+  </label>
+
+  <!-- Botão -->
+  <button id="btnTranscrever" disabled>Transcrever</button>
+
+  <!-- Progress -->
+  <div class="progress" id="progress">
+    <div class="spinner"></div>
+    <span>Enviando e transcrevendo... pode levar alguns segundos.</span>
+  </div>
+
+  <!-- Resultado -->
+  <div class="result" id="result"></div>
+
+  <!-- Copiar -->
+  <button class="copy-btn" id="btnCopiar">Copiar texto</button>
+
+  <!-- Erro -->
+  <span class="error" id="errorMsg"></span>
+</div>
+
+<script>
+  // ─── referências ──────────────────────────────────────────
+  const fileInput     = document.getElementById('fileInput');
+  const dropZone      = document.getElementById('dropZone');
+  const dropLabel     = document.getElementById('dropLabel');
+  const btnTranscrever= document.getElementById('btnTranscrever');
+  const progressEl    = document.getElementById('progress');
+  const resultEl      = document.getElementById('result');
+  const btnCopiar     = document.getElementById('btnCopiar');
+  const errorEl       = document.getElementById('errorMsg');
+
+  let arquivoSelecionado = null;
+
+  // ─── seleção de arquivo ───────────────────────────────────
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files[0];
+    if (!f) return;
+    arquivoSelecionado = f;
+    dropLabel.textContent = `📹 ${f.name} (${(f.size / 1024 / 1024).toFixed(1)} MB)`;
+    dropZone.classList.add('has-file');
+    btnTranscrever.disabled = false;
+    limparResultado();
+  });
+
+  // Drag & drop
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); });
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    const f = e.dataTransfer.files[0];
+    if (f) { fileInput.files = e.dataTransfer.files; fileInput.dispatchEvent(new Event('change')); }
+  });
+
+  // ─── transcrição ─────────────────────────────────────────
+  btnTranscrever.addEventListener('click', async () => {
+    if (!arquivoSelecionado) return;
+
+    // Validação rápida no cliente (Vercel Hobby: 4.5 MB; Pro: 4.5 MB payload, Whisper: 25 MB)
+    const MAX_MB = 24;
+    if (arquivoSelecionado.size > MAX_MB * 1024 * 1024) {
+      mostrarErro(`Arquivo muito grande (máx ${MAX_MB} MB).`);
+      return;
+    }
+
+    setLoading(true);
+    limparResultado();
+
+    try {
+      // Monta o FormData com o arquivo mp4
+      const form = new FormData();
+      form.append('file', arquivoSelecionado, arquivoSelecionado.name);
+
+      // Chama o endpoint serverless
+      const resp = await fetch('/api/transcrever', {
+        method: 'POST',
+        body  : form,
+        // Não setar Content-Type — o browser adiciona o boundary correto
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok) throw new Error(data.error || `Erro ${resp.status}`);
+
+      // Exibe o texto transcrito
+      resultEl.textContent = data.text;
+      resultEl.classList.add('show');
+      btnCopiar.classList.add('show');
+
+    } catch (err) {
+      mostrarErro(err.message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  // ─── copiar para clipboard ────────────────────────────────
+  btnCopiar.addEventListener('click', () => {
+    navigator.clipboard.writeText(resultEl.textContent).then(() => {
+      btnCopiar.textContent = 'Copiado ✓';
+      setTimeout(() => { btnCopiar.textContent = 'Copiar texto'; }, 2000);
+    });
+  });
+
+  // ─── helpers ─────────────────────────────────────────────
+  function setLoading(on) {
+    btnTranscrever.disabled = on;
+    progressEl.classList.toggle('show', on);
+  }
+
+  function limparResultado() {
+    resultEl.textContent = '';
+    resultEl.classList.remove('show');
+    btnCopiar.classList.remove('show');
+    errorEl.textContent = '';
+    errorEl.classList.remove('show');
+  }
+
+  function mostrarErro(msg) {
+    errorEl.textContent = '⚠️ ' + msg;
+    errorEl.classList.add('show');
+  }
+</script>
+</body>
+</html>
