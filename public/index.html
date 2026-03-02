@@ -902,7 +902,7 @@ async function openAdDrawer(ad) {
   $('adDrawerOverlay').classList.add('open');
 }
 
-async function transcreverAd(creativeId) {
+async function transcreverAd(creativeId, adId) {
   const btn    = $('btnTranscribe');
   const result = $('transcribeResult');
   const copyBtn= $('btnCopyTranscript');
@@ -917,18 +917,40 @@ async function transcreverAd(creativeId) {
 
   try {
     // 1. Buscar video_id do criativo via /api/meta
-    const cResp = await fetch(apiUrl(creativeId, { fields: 'video_id,object_story_spec' }));
+    const cResp = await fetch(apiUrl(creativeId, { fields: 'video_id,object_story_spec,asset_feed_spec' }));
     const cData = await cResp.json();
-    const videoId = cData.video_id || cData.object_story_spec?.video_data?.video_id;
+    const videoId = cData.video_id
+      || cData.object_story_spec?.video_data?.video_id
+      || cData.object_story_spec?.link_data?.child_attachments?.[0]?.video_id
+      || cData.asset_feed_spec?.videos?.[0]?.video_id;
 
     if (!videoId) throw new Error('Este criativo não contém vídeo — é um anúncio de imagem.');
 
     btn.innerHTML = spinner + 'Obtendo URL do vídeo...';
 
-    // 2. Buscar URL de download do vídeo
-    const vResp = await fetch(apiUrl(videoId, { fields: 'source' }));
+    // 2. Tentar buscar source direto no video_id
+    let videoUrl = null;
+    const vResp = await fetch(apiUrl(videoId, { fields: 'source,format' }));
     const vData = await vResp.json();
-    if (!vData.source) throw new Error('Não foi possível obter a URL do vídeo.');
+
+    // source direto
+    if (vData.source) videoUrl = vData.source;
+
+    // fallback: array format (diferentes qualidades)
+    if (!videoUrl && vData.format?.length) {
+      const best = vData.format.find(f => f.source) || vData.format[0];
+      if (best?.source) videoUrl = best.source;
+    }
+
+    // fallback 2: buscar via advideos da conta
+    if (!videoUrl) {
+      const avResp = await fetch(apiUrl(`${ACCOUNT}/advideos`, { ids: videoId, fields: 'source' }));
+      const avData = await avResp.json();
+      const avItem = avData?.data?.[0] || avData?.[videoId];
+      if (avItem?.source) videoUrl = avItem.source;
+    }
+
+    if (!videoUrl) throw new Error('Vídeo não acessível via API (permissão insuficiente ou vídeo expirado).');
 
     btn.innerHTML = spinner + 'Transcrevendo com Whisper...';
 
