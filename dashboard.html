@@ -409,7 +409,7 @@ function toProxy(url) {
 
 let chartSpend = null, chartROAS = null, chartDaily = null;
 let allAds = [], allCamps = [], dailyData = [];
-let _thumbMap = {}, _linkMap = {};
+let _thumbMap = {}, _linkMap = {}, _creativeIdMap = {};
 let currentDateParam = { preset: 'last_7d' };
 let adSortKey = 'spend',   adSortDir   = 'desc';
 let campSortKey = 'spend', campSortDir = 'desc';
@@ -533,14 +533,15 @@ async function load() {
 
     $('loadingMsg').textContent = 'Carregando thumbnails…';
     try {
-      const adsData = await fetchPages(apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{thumbnail_url,effective_object_story_id,instagram_permalink_url}', limit: 300 }));
+      const adsData = await fetchPages(apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{id,thumbnail_url,effective_object_story_id}', limit: 300 }));
       adsData.forEach(ad => {
         if (ad.creative?.thumbnail_url) _thumbMap[ad.id] = ad.creative.thumbnail_url;
-        const igUrl = ad.creative?.instagram_permalink_url || null;
+        if (ad.creative?.id) _creativeIdMap[ad.id] = ad.creative.id;
         const fbUrl = ad.creative?.effective_object_story_id
           ? (() => { const [p,q] = ad.creative.effective_object_story_id.split('_'); return `https://www.facebook.com/${p}/posts/${q}`; })()
           : null;
-        if (igUrl || fbUrl) _linkMap[ad.id] = { ig: igUrl, fb: fbUrl };
+        // ig link fetched lazily when drawer opens to avoid slowing initial load
+        if (fbUrl) _linkMap[ad.id] = { ig: null, fb: fbUrl };
       });
     } catch(e) {}
 
@@ -908,8 +909,20 @@ function renderDrawerChart(metric) {
 async function openAdDrawer(adId) {
   const ad = allAds.find(a => a.ad_id === adId);
   if (!ad) return;
+  const th = _thumbMap[ad.ad_id];
+
+  // Lazy-fetch Instagram link if not yet cached
+  if (_creativeIdMap[ad.ad_id] && !_linkMap[ad.ad_id]?.ig) {
+    try {
+      const cid = _creativeIdMap[ad.ad_id];
+      const res = await fetch(apiUrl(cid, { fields: 'instagram_permalink_url' }));
+      const cData = await res.json();
+      if (cData.instagram_permalink_url) {
+        _linkMap[ad.ad_id] = { ig: cData.instagram_permalink_url, fb: _linkMap[ad.ad_id]?.fb || null };
+      }
+    } catch(e) { /* silent */ }
+  }
   const links = _linkMap[ad.ad_id];
-  const th    = _thumbMap[ad.ad_id];
 
   // Fill header info
   $('drawerAdName').textContent   = ad.ad_name;
