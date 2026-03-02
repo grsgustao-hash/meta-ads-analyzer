@@ -757,13 +757,10 @@ function renderAdTable(ads) {
     const holdRate = imp>0&&v75>0 ? (v75/imp)*100 : null;
     const th    = _thumbMap[a.ad_id];
     const links = _linkMap[a.ad_id]; // { ig, fb } or undefined
-    const primaryLink = links ? (links.ig || links.fb) : null;
-    // Thumbnail element (wraps to primary link)
-    const wrapOpen  = primaryLink ? `<a href="${primaryLink}" target="_blank" rel="noopener" title="Abrir criativo" style="cursor:pointer;display:block;position:relative;flex-shrink:0">` : `<div style="flex-shrink:0">`;
-    const wrapClose = primaryLink ? `</a>` : `</div>`;
+    // Thumbnail always opens the drawer
     const thumbEl = th
-      ? `${wrapOpen}<img src="${th}" class="ad-thumb" onerror="this.style.display='none'" loading="lazy" style="display:block"/>${wrapClose}`
-      : `${wrapOpen}<div class="ad-thumb-ph"><svg class="w-4 h-4" style="color:#334155" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>${wrapClose}`;
+      ? `<div onclick="openAdDrawer('${a.ad_id}')" style="cursor:pointer;flex-shrink:0;position:relative" title="Ver métricas do criativo"><img src="${th}" class="ad-thumb" onerror="this.style.display='none'" loading="lazy" style="display:block"/></div>`
+      : `<div onclick="openAdDrawer('${a.ad_id}')" class="ad-thumb-ph" style="cursor:pointer;flex-shrink:0" title="Ver métricas do criativo"><svg class="w-4 h-4" style="color:#334155" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>`;
     // Platform badge links
     const igBadge = links?.ig ? `<a href="${links.ig}" target="_blank" rel="noopener" title="Abrir no Instagram" style="display:inline-flex;align-items:center;gap:2px;background:linear-gradient(135deg,#833ab4,#e1306c,#fd1d1d);color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;text-decoration:none;line-height:1.6">IG ↗</a>` : '';
     const fbBadge = links?.fb ? `<a href="${links.fb}" target="_blank" rel="noopener" title="Abrir no Facebook" style="display:inline-flex;align-items:center;gap:2px;background:#1877f2;color:#fff;font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;text-decoration:none;line-height:1.6">FB ↗</a>` : '';
