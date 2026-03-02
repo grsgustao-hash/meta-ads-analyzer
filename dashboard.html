@@ -399,6 +399,7 @@ function toProxy(url) {
 let chartSpend = null, chartROAS = null, chartDaily = null;
 let allAds = [], allCamps = [], dailyData = [];
 let _thumbMap = {};
+let _linkMap  = {}; // ad_id → { fb, ig }
 let currentDateParam = { preset: 'last_7d' };
 let adSortKey = 'spend',   adSortDir   = 'desc';
 let campSortKey = 'spend', campSortDir = 'desc';
@@ -533,7 +534,10 @@ async function load() {
   if (cached) {
     const { campInsights, adsets, adInsights, daily, thumbs } = cached.payload;
     dailyData = daily;
-    thumbs.forEach(({ id, t }) => { if (t) _thumbMap[id] = t; });
+    thumbs.forEach(({ id, t, fb, ig }) => {
+      if (t) _thumbMap[id] = t;
+      if (fb || ig) _linkMap[id] = { fb, ig };
+    });
     render(campInsights, adsets, adInsights);
     const ageMin = Math.round(cached.ageMs / 60000);
     $('lastUpdated').textContent = `Cache (${ageMin}min atrás) — atualizando…`;
@@ -544,7 +548,7 @@ async function load() {
   try {
     // Start thumbnail and daily fetches in background — don't block main render
     const thumbPromise = fetchPages(
-      apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{thumbnail_url}', limit: 300 })
+      apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{thumbnail_url,effective_object_story_id,instagram_permalink_url}', limit: 300 })
     ).catch(() => []);
 
     const dailyPromise = fetchPages(dailyURL, 365).catch(() => []);
@@ -566,9 +570,20 @@ async function load() {
     thumbPromise.then(adsData => {
       const thumbs = [];
       adsData.forEach(ad => {
-        const t = ad.creative?.thumbnail_url || null;
+        const t  = ad.creative?.thumbnail_url || null;
         if (t) _thumbMap[ad.id] = t;
-        thumbs.push({ id: ad.id, t });
+
+        // Build Facebook post URL from effective_object_story_id (format: pageId_postId)
+        const storyId = ad.creative?.effective_object_story_id || null;
+        let fb = null;
+        if (storyId) {
+          const parts = storyId.split('_');
+          if (parts.length === 2) fb = `https://www.facebook.com/permalink.php?story_fbid=${parts[1]}&id=${parts[0]}`;
+        }
+        const ig = ad.creative?.instagram_permalink_url || null;
+        if (fb || ig) _linkMap[ad.id] = { fb, ig };
+
+        thumbs.push({ id: ad.id, t, fb, ig });
       });
       if (adsData.length) renderAdTable(allAds);
 
@@ -790,12 +805,17 @@ function renderAdTable(ads) {
     const hookRate = imp>0&&v3s>0 ? (v3s/imp)*100 : null;
     const holdRate = imp>0&&v75>0 ? (v75/imp)*100 : null;
     const th    = _thumbMap[a.ad_id];
+    const links = _linkMap[a.ad_id];
+    const fbUrl = links?.fb || null;
+    const igUrl = links?.ig || null;
     const thumbEl = th
       ? `<div style="flex-shrink:0"><img src="${th}" class="ad-thumb" onerror="this.style.display='none'" loading="lazy" style="display:block"/></div>`
       : `<div class="ad-thumb-ph" style="flex-shrink:0"><svg class="w-4 h-4" style="color:#334155" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div>`;
+    const fbLink = fbUrl ? `<a href="${fbUrl}" target="_blank" rel="noopener" title="Ver no Facebook" style="color:#1877f2;opacity:.65;display:inline-flex;align-items:center;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.65"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></a>` : '';
+    const igLink = igUrl ? `<a href="${igUrl}" target="_blank" rel="noopener" title="Ver no Instagram" style="color:#e1306c;opacity:.65;display:inline-flex;align-items:center;transition:opacity .15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.65"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>` : '';
     tbody.innerHTML += `
       <tr>
-        <td style="max-width:240px"><div class="flex items-center gap-2">${thumbEl}<div style="min-width:0"><span class="ad-name-btn" title="${a.ad_name}">${truncate(a.ad_name,36)}</span><span class="block truncate text-xs" style="color:#475569;max-width:180px">${truncate(a.campaign_name,34)}</span></div></div></td>
+        <td style="max-width:240px"><div class="flex items-center gap-2">${thumbEl}<div style="min-width:0"><span class="ad-name-btn" title="${a.ad_name}">${truncate(a.ad_name,36)}</span><div class="flex items-center gap-1.5" style="margin-top:2px"><span class="block truncate text-xs" style="color:#475569;max-width:160px">${truncate(a.campaign_name,30)}</span>${fbLink}${igLink}</div></div></div></td>
         <td style="max-width:160px"><span class="block truncate" title="${a.adset_name}">${truncate(a.adset_name,26)}</span></td>
         <td class="text-center">${statusBadge(false)}</td>
         <td class="text-right font-semibold" style="color:#e2e8f0">${brl(parseFloat(a.spend))}</td>
