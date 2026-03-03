@@ -269,18 +269,36 @@
       <p class="text-xs mt-3 text-center" style="color:#333" id="dailyChartNote">—</p>
     </div>
 
-    <!-- ── CAMPANHAS / ANÚNCIOS ── -->
-    <div>
-      <div class="flex items-center justify-between mb-3">
-        <div class="flex items-center gap-1" style="background:#111;border:1px solid rgba(255,255,255,.07);border-radius:9px;padding:3px">
-          <button class="tab-btn active" data-tab="campaigns">Campanhas</button>
-          <button class="tab-btn" data-tab="ads">Anúncios</button>
+    <!-- ── ANÚNCIOS (cards) ── -->
+    <section id="sectionAds" style="margin-bottom:28px">
+      <!-- Barra de controles -->
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="position:relative;flex:1;min-width:160px;max-width:280px">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#444;pointer-events:none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input id="adSearch" type="text" placeholder="Buscar anúncio…" style="width:100%;padding:7px 10px 7px 30px;background:#141414;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#ccc;font-size:12px;outline:none"/>
         </div>
-        <span class="text-xs" style="color:#444" id="tabNote">—</span>
+        <select id="adSortSelect" style="padding:7px 10px;background:#141414;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#888;font-size:12px;outline:none;cursor:pointer">
+          <option value="spend">Gasto ↓</option>
+          <option value="roas">ROAS ↓</option>
+          <option value="ctr">CTR ↓</option>
+          <option value="hook_rate">Hook Rate ↓</option>
+          <option value="cpa">CPA ↑</option>
+          <option value="faturamento">Faturamento ↓</option>
+        </select>
+        <span style="font-size:11px;color:#444;margin-left:auto" id="tabNote">—</span>
       </div>
+      <!-- Grid de cards -->
+      <div id="adsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px"></div>
+      <div id="adTableEmpty" class="hidden" style="text-align:center;padding:40px 20px;font-size:13px;color:#475569">Nenhum anúncio encontrado.</div>
+    </section>
 
-      <!-- Tab: Campanhas -->
-      <div id="tabCampaigns">
+    <!-- ── CAMPANHAS (colapsável) ── -->
+    <section id="sectionCampaigns" style="margin-bottom:24px">
+      <button onclick="toggleCampaigns()" style="display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:#111;border:1px solid rgba(255,255,255,.07);border-radius:9px;cursor:pointer;color:#666;font-size:12px;font-weight:600;text-align:left;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor='rgba(255,255,255,.14)';this.style.color='#aaa'" onmouseout="this.style.borderColor='rgba(255,255,255,.07)';this.style.color='#666'">
+        <span>📊 Campanhas</span>
+        <span id="campArrow" style="margin-left:auto;font-size:10px">▸</span>
+      </button>
+      <div id="campBody" style="display:none;margin-top:10px">
         <!-- Mini charts -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
           <div class="chart-box">
@@ -292,7 +310,7 @@
             <div class="chart-wrap"><canvas id="roasChart"></canvas></div>
           </div>
         </div>
-        <!-- Campaign table -->
+        <!-- Tabela de campanhas -->
         <div class="dark-table">
           <div class="dark-table-scroll">
           <table class="w-full text-xs" style="min-width:680px">
@@ -312,41 +330,7 @@
           </div>
         </div>
       </div>
-
-      <!-- Tab: Anúncios -->
-      <div id="tabAds" class="hidden space-y-3">
-        <div class="relative max-w-sm">
-          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style="color:#444" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          <input id="adSearch" type="text" placeholder="Buscar por nome do anúncio…"
-            class="w-full pl-9 pr-4 py-2 text-sm rounded-lg" style="background:#141414;border:1px solid rgba(255,255,255,.08);color:#ccc;outline:none"/>
-        </div>
-        <div class="dark-table">
-          <div class="dark-table-scroll">
-          <table class="w-full text-xs" style="min-width:980px">
-            <thead id="adTableHead"><tr>
-              <th class="text-left sortable-th" data-sort="name" style="min-width:240px">Anúncio <span class="sort-icon">↕</span></th>
-              <th class="text-left sortable-th" data-sort="adset" style="min-width:150px">Conjunto <span class="sort-icon">↕</span></th>
-              <th class="text-center" style="min-width:90px">Status</th>
-              <th class="text-right sortable-th sort-active" data-sort="spend" style="min-width:80px">Spent <span class="sort-icon">↓</span></th>
-              <th class="text-right sortable-th" data-sort="impressions" style="min-width:80px">Impressions <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="cpm" style="min-width:75px">CPM <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="ctr" style="min-width:70px">CTR (all) <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="cpc_link" style="min-width:75px">CPC Link <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="hook_rate" style="min-width:80px" title="3s views / impressions">Hook Rate <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="hold_rate" style="min-width:80px" title="75% views / impressions">Hold Rate <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="purchases" style="min-width:75px">Purchases <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="cpa" style="min-width:80px">CPA <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="roas" style="min-width:65px">ROAS <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="faturamento" style="min-width:95px">Faturamento <span class="sort-icon">↕</span></th>
-              <th class="text-right sortable-th" data-sort="lucro" style="min-width:85px">Lucro <span class="sort-icon">↕</span></th>
-            </tr></thead>
-            <tbody id="adTableBody"></tbody>
-          </table>
-          </div>
-          <div id="adTableEmpty" class="hidden text-center py-10 text-sm" style="color:#475569">Nenhum anúncio encontrado.</div>
-        </div>
-      </div>
-    </div>
+    </section>
 
     <p class="text-center text-xs pb-4" style="color:#1e2130">Meta Graph API v21 · Atribuição 7d click · <span id="lastUpdated"></span></p>
   </div>
@@ -571,7 +555,7 @@ async function load() {
 
         thumbs.push({ id: ad.id, t, fb, ig });
       });
-      if (adsData.length) renderAdTable(allAds);
+      if (adsData.length) renderAdCards(allAds);
 
       // Save complete snapshot to cache (including daily if ready)
       dailyPromise.then(() => {
@@ -680,7 +664,7 @@ function render(campInsights, adsets, adInsights) {
 
   // Ad table
   allAds = adInsights.filter(a=>parseFloat(a.spend)>0);
-  renderAdTable(allAds);
+  renderAdCards(allAds);
 
   $('loadingState').classList.add('hidden');
   $('dashboard').classList.remove('hidden');
@@ -771,7 +755,76 @@ function renderCampTable(camps) {
   });
 }
 
-// ── AD TABLE ──────────────────────────────────────────────────────────────────
+// ── AD CARDS ──────────────────────────────────────────────────────────────────
+function renderAdCards(ads) {
+  const sorted = doSort(ads, adSortKey, adSortDir);
+  const grid  = $('adsGrid');
+  const empty = $('adTableEmpty');
+  grid.innerHTML = '';
+  $('tabNote').textContent = `${allAds.length} anúncios · ${ads.length} exibidos`;
+  if (!sorted.length) { empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  sorted.forEach(ad => {
+    const sp   = parseFloat(ad.spend || 0);
+    const r    = getRoas(ad.purchase_roas);
+    const rev  = getAction(ad.action_values, 'purchase');
+    const p    = getAction(ad.actions, 'purchase');
+    const imp  = parseInt(ad.impressions || 0);
+    const v3s  = getAction(ad.actions, 'video_view');
+    const v75  = getVideoVal(ad.video_p75_watched_actions);
+    const hook = imp > 0 && v3s > 0 ? (v3s / imp) * 100 : null;
+    const ctr  = parseFloat(ad.ctr || 0);
+    const th   = _thumbMap[ad.ad_id];
+
+    const roasC  = roasColor(r);
+    const hookC  = hook ? (hook >= 30 ? '#4ade80' : hook >= 20 ? '#fbbf24' : '#f87171') : '#444';
+    const ctrC   = ctr >= 2 ? '#4ade80' : ctr >= 1 ? '#fbbf24' : ctr > 0 ? '#f87171' : '#444';
+    // borda inferior colorida pelo ROAS
+    const borderC = r >= 2 ? '#4ade80' : r >= 1 ? '#fbbf24' : r > 0 ? '#f87171' : '#1f1f1f';
+
+    const thumb = th
+      ? `<img src="${th}" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:8px 8px 0 0;display:block" onerror="this.parentElement.innerHTML='<div style=\\'width:100%;aspect-ratio:16/9;background:#141414;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center\\'><svg width=\\'28\\' height=\\'28\\' fill=\\'none\\' stroke=\\'#2a2a2a\\' stroke-width=\\'1.5\\' viewBox=\\'0 0 24 24\\'><rect x=\\'3\\' y=\\'3\\' width=\\'18\\' height=\\'18\\' rx=\\'2\\'/><circle cx=\\'8.5\\' cy=\\'8.5\\' r=\\'1.5\\'/><path d=\\'M21 15l-5-5L5 21\\'/></svg></div>'" loading="lazy"/>`
+      : `<div style="width:100%;aspect-ratio:16/9;background:#111;border-radius:8px 8px 0 0;display:flex;align-items:center;justify-content:center"><svg width="28" height="28" fill="none" stroke="#222" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>`;
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#0f0f0f;border:1px solid rgba(255,255,255,.07);border-radius:10px;overflow:hidden;cursor:pointer;transition:border-color .15s,transform .15s;display:flex;flex-direction:column';
+    card.innerHTML = `
+      ${thumb}
+      <div style="padding:11px 12px 10px;flex:1;display:flex;flex-direction:column;gap:8px">
+        <div>
+          <p style="font-size:12px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px" title="${ad.ad_name}">${truncate(ad.ad_name, 38)}</p>
+          <p style="font-size:10px;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${ad.campaign_name}">${truncate(ad.campaign_name, 34)}</p>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px">
+          <div>
+            <p style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">ROAS</p>
+            <p style="font-size:15px;font-weight:700;color:${roasC};line-height:1">${r > 0 ? fmt(r, 2) + 'x' : '—'}</p>
+          </div>
+          <div>
+            <p style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Gasto</p>
+            <p style="font-size:13px;font-weight:700;color:#e2e8f0;line-height:1">${brl(sp)}</p>
+          </div>
+          <div>
+            <p style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">CTR</p>
+            <p style="font-size:13px;font-weight:600;color:${ctrC};line-height:1">${fmt(ctr, 2)}%</p>
+          </div>
+          <div>
+            <p style="font-size:9px;color:#333;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">Hook</p>
+            <p style="font-size:13px;font-weight:600;color:${hookC};line-height:1">${hook ? fmt(hook, 1) + '%' : '—'}</p>
+          </div>
+        </div>
+      </div>
+      <div style="height:3px;background:${borderC};border-radius:0 0 10px 10px"></div>
+    `;
+    card.addEventListener('mouseenter', () => { card.style.borderColor = 'rgba(255,255,255,.15)'; card.style.transform = 'translateY(-1px)'; });
+    card.addEventListener('mouseleave', () => { card.style.borderColor = 'rgba(255,255,255,.07)'; card.style.transform = ''; });
+    card.addEventListener('click', () => openAdDrawer(ad));
+    grid.appendChild(card);
+  });
+}
+
+// ── AD TABLE (backup / legado) ─────────────────────────────────────────────────
 function renderAdTable(ads) {
   const sorted = doSort(ads, adSortKey, adSortDir);
   const tbody=$('adTableBody'), empty=$('adTableEmpty');
@@ -1034,16 +1087,20 @@ function copiarTranscricao() {
   });
 }
 
-// ── TABS ──────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab=btn.dataset.tab;
-    $('tabCampaigns').style.display = tab==='campaigns'?'block':'none';
-    $('tabAds').style.display        = tab==='ads'?'block':'none';
-    if (tab==='ads') $('tabNote').textContent=`${allAds.length} anúncios com gasto`;
-  });
+// ── CAMPANHAS TOGGLE ──────────────────────────────────────────────────────────
+function toggleCampaigns() {
+  const body  = $('campBody');
+  const arrow = $('campArrow');
+  const open  = body.style.display !== 'none';
+  body.style.display  = open ? 'none' : 'block';
+  arrow.textContent   = open ? '▸' : '▾';
+}
+
+// ── AD SORT SELECT ────────────────────────────────────────────────────────────
+$('adSortSelect').addEventListener('change', e => {
+  adSortKey = e.target.value;
+  adSortDir = 'desc';
+  renderAdCards(filterAds($('adSearch').value));
 });
 
 // ── DAILY METRIC SELECT ────────────────────────────────────────────────────────
@@ -1056,7 +1113,7 @@ function filterAds(q) {
   return allAds.filter(a => a.ad_name?.toLowerCase().includes(s));
 }
 $('adSearch').addEventListener('input',e=>{
-  renderAdTable(filterAds(e.target.value));
+  renderAdCards(filterAds(e.target.value));
 });
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
@@ -1107,15 +1164,6 @@ document.querySelectorAll('#campTableHead [data-sort]').forEach(th => {
   });
 });
 
-document.querySelectorAll('#adTableHead [data-sort]').forEach(th => {
-  th.addEventListener('click', () => {
-    const key = th.dataset.sort;
-    if (key === adSortKey) { adSortDir = adSortDir==='desc'?'asc':'desc'; }
-    else { adSortKey = key; adSortDir = 'desc'; }
-    updateSortUI('adTableHead', adSortKey, adSortDir);
-    renderAdTable(filterAds($('adSearch').value));
-  });
-});
 
 
 // ── ACCOUNT PICKER ────────────────────────────────────────────────────────────
