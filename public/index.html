@@ -913,19 +913,30 @@ async function transcreverAd(creativeId, adId) {
 
   const spinner = `<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.2);border-top-color:#111;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>`;
 
+  // Limpa estado anterior
   btn.disabled = true;
   btn.innerHTML = spinner + 'Transcrevendo — aguarde…';
-  result.style.display = 'none';
+  result.style.display  = 'none';
   copyBtn.style.display = 'none';
+  const oldUpload = document.getElementById('uploadFallback');
+  if (oldUpload) oldUpload.remove();
 
   try {
-    // O servidor resolve o vídeo (page token, attachments, etc.) e transcreve em um passo só
     const tResp = await fetch('/api/transcrever', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({ creativeId, storyId }),
     });
     const tData = await tResp.json();
+
+    // Vídeo existe mas API não consegue baixar → mostrar upload manual
+    if (tResp.status === 422 && tData.needsUpload) {
+      btn.innerHTML = '🎙 Transcrever Áudio do Anúncio';
+      btn.disabled  = false;
+      _mostrarUploadFallback();
+      return;
+    }
+
     if (!tResp.ok) throw new Error(tData.error || `Erro ${tResp.status}`);
 
     result.textContent    = tData.text;
@@ -941,6 +952,63 @@ async function transcreverAd(creativeId, adId) {
     result.style.color   = '#f87171';
     btn.innerHTML = '🎙 Tentar novamente';
     btn.disabled  = false;
+  }
+}
+
+function _mostrarUploadFallback() {
+  const btn = $('btnTranscribe');
+  const div = document.createElement('div');
+  div.id = 'uploadFallback';
+  div.style.cssText = 'margin-top:10px;padding:14px;background:#141414;border:1px solid rgba(255,255,255,.08);border-radius:10px;';
+  div.innerHTML = `
+    <p style="font-size:12px;color:#888;margin:0 0 10px;text-align:center;line-height:1.6">
+      ⚠️ Token sem acesso ao vídeo via API.<br>
+      <strong style="color:#ccc">Faça o upload do arquivo do anúncio para transcrever:</strong>
+    </p>
+    <label id="uploadLabel" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;background:#1a1a1a;border:1px dashed rgba(255,255,255,.18);border-radius:8px;cursor:pointer;color:#888;font-size:12px;transition:border-color .15s,color .15s" onmouseover="this.style.borderColor='rgba(255,255,255,.35)';this.style.color='#ccc'" onmouseout="this.style.borderColor='rgba(255,255,255,.18)';this.style.color='#888'">
+      📁 Selecionar vídeo / áudio (MP4, MP3, M4A…)
+      <input type="file" accept="video/*,audio/*,.mp4,.mp3,.m4a,.wav,.ogg,.webm" style="display:none" onchange="_transcreverArquivo(this)">
+    </label>
+    <p style="font-size:10px;color:#444;margin:8px 0 0;text-align:center">Limite: 25 MB · O arquivo não é armazenado</p>
+  `;
+  btn.parentNode.insertBefore(div, btn.nextSibling);
+}
+
+async function _transcreverArquivo(input) {
+  const file  = input.files[0];
+  if (!file) return;
+
+  const result  = $('transcribeResult');
+  const copyBtn = $('btnCopyTranscript');
+  const label   = $('uploadLabel');
+  const spinner = `<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.15);border-top-color:#ccc;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>`;
+
+  label.style.pointerEvents = 'none';
+  label.innerHTML = spinner + 'Transcrevendo — aguarde…';
+  result.style.display  = 'none';
+  copyBtn.style.display = 'none';
+
+  try {
+    const form = new FormData();
+    form.append('file', file, file.name);
+
+    const tResp = await fetch('/api/transcrever', { method: 'POST', body: form });
+    const tData = await tResp.json();
+    if (!tResp.ok) throw new Error(tData.error || `Erro ${tResp.status}`);
+
+    result.textContent    = tData.text;
+    result.style.display  = 'block';
+    result.style.color    = '#ccc';
+    copyBtn.style.display = 'block';
+    label.innerHTML = '✓ Transcrito com sucesso! Selecionar outro arquivo<input type="file" accept="video/*,audio/*,.mp4,.mp3,.m4a,.wav,.ogg,.webm" style="display:none" onchange="_transcreverArquivo(this)">';
+    label.style.pointerEvents = 'auto';
+
+  } catch (err) {
+    result.textContent   = '⚠️ ' + err.message;
+    result.style.display = 'block';
+    result.style.color   = '#f87171';
+    label.innerHTML = '📁 Tentar novamente<input type="file" accept="video/*,audio/*,.mp4,.mp3,.m4a,.wav,.ogg,.webm" style="display:none" onchange="_transcreverArquivo(this)">';
+    label.style.pointerEvents = 'auto';
   }
 }
 
