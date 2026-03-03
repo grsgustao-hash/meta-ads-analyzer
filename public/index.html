@@ -905,90 +905,25 @@ async function openAdDrawer(ad) {
 }
 
 async function transcreverAd(creativeId, adId) {
-  // Look up storyId dynamically — _storyMap is populated async after thumbs load
+  // storyId lido no momento do clique — _storyMap já foi populado pelas thumbnails
   const storyId = _storyMap[adId] || '';
-  const btn    = $('btnTranscribe');
-  const result = $('transcribeResult');
-  const copyBtn= $('btnCopyTranscript');
+  const btn     = $('btnTranscribe');
+  const result  = $('transcribeResult');
+  const copyBtn = $('btnCopyTranscript');
 
   const spinner = `<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(0,0,0,.2);border-top-color:#111;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px"></span>`;
 
   btn.disabled = true;
-  btn.innerHTML = spinner + 'Buscando vídeo...';
+  btn.innerHTML = spinner + 'Transcrevendo — aguarde…';
   result.style.display = 'none';
-  result.style.color = '#ccc';
   copyBtn.style.display = 'none';
 
   try {
-    // 1. Buscar video_id do criativo via /api/meta
-    const cResp = await fetch(apiUrl(creativeId, { fields: 'video_id,object_story_spec,asset_feed_spec' }));
-    const cData = await cResp.json();
-    const videoId = cData.video_id
-      || cData.object_story_spec?.video_data?.video_id
-      || cData.object_story_spec?.link_data?.child_attachments?.[0]?.video_id
-      || cData.asset_feed_spec?.videos?.[0]?.video_id;
-
-    let videoUrl = null;
-
-    if (videoId) {
-      btn.innerHTML = spinner + 'Obtendo URL do vídeo...';
-
-      // 2. Tentar buscar source direto no video_id
-      const vResp = await fetch(apiUrl(videoId, { fields: 'source,format' }));
-      const vData = await vResp.json();
-
-      // source direto
-      if (vData.source) videoUrl = vData.source;
-
-      // fallback: array format (diferentes qualidades)
-      if (!videoUrl && vData.format?.length) {
-        const best = vData.format.find(f => f.source) || vData.format[0];
-        if (best?.source) videoUrl = best.source;
-      }
-
-      // fallback 2: buscar via advideos da conta
-      if (!videoUrl) {
-        const avResp = await fetch(apiUrl(`${ACCOUNT}/advideos`, { ids: videoId, fields: 'source' }));
-        const avData = await avResp.json();
-        const avItem = avData?.data?.[0] || avData?.[videoId];
-        if (avItem?.source) videoUrl = avItem.source;
-      }
-    }
-
-    // fallback 3: buscar via effective_object_story_id → post attachments
-    if (!videoUrl && storyId) {
-      btn.innerHTML = spinner + 'Buscando via post da página...';
-      const sResp = await fetch(apiUrl(storyId, { fields: 'attachments{media_type,type,media,subattachments{media_type,type,media}}' }));
-      const sData = await sResp.json();
-      console.log('[transcrever] storyId:', storyId, '| attachments:', JSON.stringify(sData));
-
-      // Flatten top-level + subattachments into one list
-      const allAttach = [];
-      (sData.attachments?.data || []).forEach(a => {
-        allAttach.push(a);
-        (a.subattachments?.data || []).forEach(sub => allAttach.push(sub));
-      });
-
-      for (const a of allAttach) {
-        if (a.media?.source) { videoUrl = a.media.source; break; }
-      }
-    }
-
-    if (!videoUrl) {
-      const why = !videoId && !storyId ? 'anúncio sem vídeo detectado'
-        : !storyId ? 'token sem permissão video_management'
-        : `story_id ${storyId} sem source acessível`;
-      console.warn('[transcrever] sem videoUrl. videoId:', videoId, '| storyId:', storyId);
-      throw new Error(`Vídeo não acessível via API (${why}).`);
-    }
-
-    btn.innerHTML = spinner + 'Transcrevendo com Whisper...';
-
-    // 3. Enviar URL para o backend transcrever
+    // O servidor resolve o vídeo (page token, attachments, etc.) e transcreve em um passo só
     const tResp = await fetch('/api/transcrever', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body   : JSON.stringify({ videoUrl }),
+      body   : JSON.stringify({ creativeId, storyId }),
     });
     const tData = await tResp.json();
     if (!tResp.ok) throw new Error(tData.error || `Erro ${tResp.status}`);
