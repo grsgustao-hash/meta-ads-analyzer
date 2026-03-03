@@ -287,6 +287,13 @@
         </select>
         <span style="font-size:11px;color:#444;margin-left:auto" id="tabNote">—</span>
       </div>
+      <!-- Filtro por UTM (produtos) — aparece quando URLs com UTM são detectadas -->
+      <div id="utmFilterRow" style="display:none;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <select id="utmParamSelect" style="padding:5px 8px;background:#141414;border:1px solid rgba(255,255,255,.07);border-radius:7px;color:#555;font-size:11px;outline:none;cursor:pointer;flex-shrink:0"></select>
+          <div id="utmChips" style="display:flex;gap:5px;flex-wrap:wrap"></div>
+        </div>
+      </div>
       <!-- Grid de cards -->
       <div id="adsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px"></div>
       <div id="adTableEmpty" class="hidden" style="text-align:center;padding:40px 20px;font-size:13px;color:#475569">Nenhum anúncio encontrado.</div>
@@ -365,6 +372,9 @@ let _thumbMap = {};
 let _linkMap  = {}; // ad_id → { fb, ig }
 let _creativeIdMap = {}; // ad_id → creative_id (para buscar vídeo)
 let _storyMap      = {}; // ad_id → effective_object_story_id
+let _urlMap        = {}; // ad_id → destination URL (landing page)
+let _activeUTM     = null; // { param, value } | null
+let _utmParam      = 'utm_content'; // param UTM selecionado para filtro
 let currentDateParam = { preset: 'last_7d' };
 let adSortKey = 'spend',   adSortDir   = 'desc';
 let campSortKey = 'spend', campSortDir = 'desc';
@@ -501,11 +511,13 @@ async function load() {
   if (cached) {
     const { campInsights, adsets, adInsights, daily, thumbs } = cached.payload;
     dailyData = daily;
-    thumbs.forEach(({ id, t, fb, ig }) => {
+    thumbs.forEach(({ id, t, fb, ig, u }) => {
       if (t) _thumbMap[id] = t;
       if (fb || ig) _linkMap[id] = { fb, ig };
+      if (u) _urlMap[id] = u;
     });
     render(campInsights, adsets, adInsights);
+    buildUTMFilter();
     const ageMin = Math.round(cached.ageMs / 60000);
     $('lastUpdated').textContent = `Cache (${ageMin}min atrás) — atualizando…`;
   } else {
@@ -515,7 +527,7 @@ async function load() {
   try {
     // Start thumbnail and daily fetches in background — don't block main render
     const thumbPromise = fetchPages(
-      apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{id,thumbnail_url,effective_object_story_id,instagram_permalink_url}', limit: 300 })
+      apiUrl(`${ACCOUNT}/ads`, { fields: 'id,creative{id,thumbnail_url,effective_object_story_id,instagram_permalink_url,object_url}', limit: 300 })
     ).catch(() => []);
 
     const dailyPromise = fetchPages(dailyURL, 365).catch(() => []);
@@ -553,9 +565,14 @@ async function load() {
         const ig = ad.creative?.instagram_permalink_url || null;
         if (fb || ig) _linkMap[ad.id] = { fb, ig };
 
-        thumbs.push({ id: ad.id, t, fb, ig });
+        // Destination URL para filtro por UTM
+        const objUrl = ad.creative?.object_url || null;
+        if (objUrl) _urlMap[ad.id] = objUrl;
+
+        thumbs.push({ id: ad.id, t, fb, ig, u: objUrl });
       });
       if (adsData.length) renderAdCards(allAds);
+      buildUTMFilter(); // constrói chips de filtro por produto
 
       // Save complete snapshot to cache (including daily if ready)
       dailyPromise.then(() => {
@@ -752,6 +769,86 @@ function renderCampTable(camps) {
         <td class="text-right">${cp?brl(cp):'—'}</td>
         <td class="text-right font-semibold" style="color:${roasColor(r)}">${r>0?fmt(r,2)+'x':'—'}</td>
       </tr>`;
+  });
+}
+
+// ── UTM FILTER ────────────────────────────────────────────────────────────────
+
+function extractUTMValue(adId, param) {
+  const url = _urlMap[adId];
+  if (!url) return null;
+  try { return new URL(url).searchParams.get(param) || null; }
+  catch { return null; }
+}
+
+function buildUTMFilter() {
+  // Coleta todos os params UTM encontrados nas URLs
+  const paramCounts = {};
+  Object.values(_urlMap).forEach(url => {
+    try {
+      new URL(url).searchParams.forEach((_, k) => {
+        if (k.startsWith('utm_')) paramCounts[k] = (paramCounts[k] || 0) + 1;
+      });
+    } catch {}
+  });
+
+  const params = Object.keys(paramCounts);
+  if (!params.length) { $('utmFilterRow').style.display = 'none'; return; }
+
+  // Ordena por frequência; prioriza utm_content e utm_campaign
+  params.sort((a, b) => {
+    const priority = { utm_content: 3, utm_campaign: 2, utm_term: 1 };
+    return (priority[b] || 0) - (priority[a] || 0) || paramCounts[b] - paramCounts[a];
+  });
+
+  // Popula o select de param
+  const sel = $('utmParamSelect');
+  sel.innerHTML = params.map(p => `<option value="${p}"${p === _utmParam ? ' selected' : ''}>${p}</option>`).join('');
+  if (!params.includes(_utmParam)) _utmParam = params[0];
+
+  renderUTMChips();
+  $('utmFilterRow').style.display = 'block';
+}
+
+function renderUTMChips() {
+  const values = new Set();
+  allAds.forEach(ad => {
+    const v = extractUTMValue(ad.ad_id, _utmParam);
+    if (v) values.add(v);
+  });
+
+  const chips = $('utmChips');
+  chips.innerHTML = '';
+
+  const chipStyle = (active) =>
+    `padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid;transition:all .15s;white-space:nowrap;` +
+    (active
+      ? `background:#6366f1;border-color:#6366f1;color:#fff`
+      : `background:#141414;border-color:rgba(255,255,255,.08);color:#555`);
+
+  // Chip "Todos"
+  const allChip = document.createElement('button');
+  allChip.textContent = 'Todos';
+  allChip.style.cssText = chipStyle(_activeUTM === null);
+  allChip.addEventListener('click', () => {
+    _activeUTM = null;
+    renderUTMChips();
+    renderAdCards(filterAds($('adSearch').value));
+  });
+  chips.appendChild(allChip);
+
+  // Chip por valor UTM (ordenado alfabeticamente)
+  [...values].sort().forEach(val => {
+    const isActive = _activeUTM?.param === _utmParam && _activeUTM?.value === val;
+    const chip = document.createElement('button');
+    chip.textContent = val;
+    chip.style.cssText = chipStyle(isActive);
+    chip.addEventListener('click', () => {
+      _activeUTM = { param: _utmParam, value: val };
+      renderUTMChips();
+      renderAdCards(filterAds($('adSearch').value));
+    });
+    chips.appendChild(chip);
   });
 }
 
