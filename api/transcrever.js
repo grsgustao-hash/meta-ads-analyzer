@@ -47,44 +47,53 @@ async function resolveVideoUrl(creativeId, storyId) {
 
   log.push(`creative→videoId: ${videoId || 'none'}`);
 
-  let videoUrl = null;
+  let videoUrl  = null;
+  let pageToken = null;
 
-  // 2. Tentar source direto (token principal)
-  if (videoId) {
-    const vData = await metaGet(videoId, {
-      fields: 'source,download_hd_url,download_sd_url,format',
-    });
-    videoUrl = vData.source || vData.download_hd_url || vData.download_sd_url;
-
-    if (!videoUrl && vData.format?.length) {
-      const best = vData.format.find(f => f.source) || vData.format[0];
-      if (best?.source) videoUrl = best.source;
-    }
-    log.push(`direct source: ${videoUrl ? 'ok' : 'none'}`);
-  }
-
-  // 3. Tentar page access token → source
-  if (!videoUrl && storyId && videoId) {
-    const pageId = storyId.split('_')[0];
+  // Buscar page token uma vez e reutilizar em todos os fallbacks
+  if (storyId) {
+    const pageId   = storyId.split('_')[0];
     const pageData = await metaGet(pageId, { fields: 'access_token' });
-
     if (pageData.access_token) {
+      pageToken = pageData.access_token;
       log.push('page token: obtained');
-      const pvData = await metaGet(videoId, {
-        fields: 'source,download_hd_url,download_sd_url',
-      }, pageData.access_token);
-      videoUrl = pvData.source || pvData.download_hd_url || pvData.download_sd_url;
-      log.push(`page token source: ${videoUrl ? 'ok' : 'none'}`);
     } else {
       log.push(`page token: not available (${pageData.error?.message || 'no field'})`);
     }
   }
 
-  // 4. Fallback: post attachments (media.source / media.video.source)
-  if (!videoUrl && storyId) {
-    const sData = await metaGet(storyId, {
-      fields: 'attachments{media_type,type,media,subattachments{media_type,type,media}}',
+  if (videoId) {
+    // 2. source / download urls / format[] com token principal
+    const vData = await metaGet(videoId, {
+      fields: 'source,download_hd_url,download_sd_url,format',
     });
+    videoUrl = vData.source || vData.download_hd_url || vData.download_sd_url;
+    if (!videoUrl && vData.format?.length) {
+      const best = vData.format.find(f => f.source) || vData.format[0];
+      if (best?.source) videoUrl = best.source;
+    }
+    log.push(`direct source: ${videoUrl ? 'ok' : 'none'}`);
+
+    // 3. Mesma tentativa com page token
+    if (!videoUrl && pageToken) {
+      const pvData = await metaGet(videoId, {
+        fields: 'source,download_hd_url,download_sd_url,format',
+      }, pageToken);
+      videoUrl = pvData.source || pvData.download_hd_url || pvData.download_sd_url;
+      if (!videoUrl && pvData.format?.length) {
+        const best = pvData.format.find(f => f.source) || pvData.format[0];
+        if (best?.source) videoUrl = best.source;
+      }
+      log.push(`page token source: ${videoUrl ? 'ok' : 'none'}`);
+    }
+  }
+
+  // 4. Attachments do post com page token e campo media{source} explícito
+  if (!videoUrl && storyId) {
+    const tok   = pageToken || META_TOKEN;
+    const sData = await metaGet(storyId, {
+      fields: 'attachments{media_type,type,media{source,video{source}},subattachments{media_type,type,media{source,video{source}}}}',
+    }, tok);
 
     const allAttach = [];
     (sData.attachments?.data || []).forEach(a => {
@@ -96,11 +105,33 @@ async function resolveVideoUrl(creativeId, storyId) {
       const src = a.media?.source || a.media?.video?.source;
       if (src) { videoUrl = src; break; }
     }
-    log.push(`attachments: ${videoUrl ? 'ok' : 'none'}`);
+    log.push(`attachments (${pageToken ? 'page' : 'main'} token): ${videoUrl ? 'ok' : 'none'}`);
+  }
+
+  // 5. Listar vídeos da página e localizar por videoId (page token)
+  if (!videoUrl && pageToken && videoId && storyId) {
+    const pageId = storyId.split('_')[0];
+    try {
+      let cursor = null;
+      outer: for (let p = 0; p < 10; p++) {
+        const params = { fields: 'id,source,download_hd_url', limit: 100 };
+        if (cursor) params.after = cursor;
+        const vList = await metaGet(`${pageId}/videos`, params, pageToken);
+        for (const v of (vList.data || [])) {
+          if (v.id === videoId) {
+            videoUrl = v.source || v.download_hd_url;
+            break outer;
+          }
+        }
+        cursor = vList.paging?.cursors?.after;
+        if (!cursor) break;
+      }
+    } catch (e) { /* ignora erros de listagem */ }
+    log.push(`page/videos list: ${videoUrl ? 'ok' : 'none'}`);
   }
 
   console.log('[transcrever] resolveVideoUrl:', log.join(' | '));
-  return { videoId, videoUrl };
+  return { videoId, videoUrl, log };
 }
 
 // ─── Multipart file helper ───────────────────────────────────
@@ -166,13 +197,18 @@ module.exports = async function handler(req, res) {
         // ── MODO 2: resolve URL server-side via Graph API ──
         if (!META_TOKEN) return res.status(500).json({ error: 'META_ACCESS_TOKEN não configurado no servidor.' });
 
-        const { videoId, videoUrl } = await resolveVideoUrl(body.creativeId, body.storyId || '');
+        const { videoId, videoUrl, log } = await resolveVideoUrl(body.creativeId, body.storyId || '');
 
         if (!videoUrl) {
-          const why = !videoId
+          const isImage = !videoId;
+          const why = isImage
             ? 'criativo não contém vídeo (provavelmente anúncio de imagem)'
-            : 'token sem permissão suficiente para acessar o vídeo (video_management necessário)';
-          return res.status(422).json({ error: `Vídeo não acessível: ${why}.` });
+            : 'todas as tentativas de acesso ao vídeo falharam — token sem video_management';
+          return res.status(422).json({
+            error      : `Vídeo não acessível: ${why}.`,
+            needsUpload: !isImage,   // true = tem vídeo mas não conseguimos baixar → oferecer upload manual
+            log,
+          });
         }
 
         // Baixa o vídeo
