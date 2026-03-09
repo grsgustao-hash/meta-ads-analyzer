@@ -103,9 +103,63 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes shimmer { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
     .sk { background: linear-gradient(90deg,#1e1e1e 25%,#2a2a2a 50%,#1e1e1e 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 4px; }
+
+    /* ── Login overlay ──────────────────────────────────────────────── */
+    #loginOverlay {
+      position:fixed; inset:0; z-index:999;
+      background:#0c0c0c;
+      display:flex; align-items:center; justify-content:center;
+    }
+    #loginOverlay.hidden { display:none; }
+    #loginBox {
+      width:100%; max-width:360px; padding:36px 32px;
+      background:#141414; border:1px solid rgba(255,255,255,.08);
+      border-radius:16px; display:flex; flex-direction:column; gap:20px;
+    }
+    #loginBox .login-logo {
+      width:40px; height:40px; border-radius:10px;
+      background:#1a1a1a; border:1px solid rgba(255,255,255,.1);
+      display:flex; align-items:center; justify-content:center;
+    }
+    #loginBox h2 { font-size:18px; font-weight:700; color:#ededed; }
+    #loginBox p  { font-size:13px; color:#555; margin-top:-14px; }
+    #loginPassInput {
+      width:100%; padding:10px 14px;
+      background:#1a1a1a; border:1px solid rgba(255,255,255,.1);
+      border-radius:8px; color:#ededed; font-size:14px; outline:none;
+      transition:border-color .15s;
+    }
+    #loginPassInput:focus { border-color:rgba(99,102,241,.6); }
+    #loginPassInput.error { border-color:rgba(248,113,113,.6); }
+    #loginBtn {
+      width:100%; padding:10px; border-radius:8px;
+      background:#6366f1; color:#fff; font-size:14px; font-weight:600;
+      border:none; cursor:pointer; transition:background .15s;
+    }
+    #loginBtn:hover { background:#4f46e5; }
+    #loginBtn:disabled { background:#333; color:#555; cursor:not-allowed; }
+    #loginError { font-size:12px; color:#f87171; text-align:center; min-height:16px; }
   </style>
 </head>
 <body class="min-h-screen">
+
+<!-- ─── LOGIN OVERLAY ─── -->
+<div id="loginOverlay">
+  <div id="loginBox">
+    <div class="login-logo">
+      <svg width="20" height="20" fill="#888" viewBox="0 0 24 24">
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+      </svg>
+    </div>
+    <div>
+      <h2>Meta Ads Dashboard</h2>
+      <p>Digite a senha para acessar</p>
+    </div>
+    <input id="loginPassInput" type="password" placeholder="Senha" autocomplete="current-password" />
+    <button id="loginBtn">Entrar</button>
+    <p id="loginError"></p>
+  </div>
+</div>
 
 <!-- ─── HEADER ─── -->
 <header class="px-6 py-3 sticky top-0 z-20" style="background:rgba(12,12,12,.95);border-bottom:1px solid rgba(255,255,255,.07);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)">
@@ -350,6 +404,64 @@
 </aside>
 
 <script>
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+(function initAuth() {
+  const LS_KEY = 'meta_dash_token';
+  const overlay = document.getElementById('loginOverlay');
+  const passInput = document.getElementById('loginPassInput');
+  const loginBtn = document.getElementById('loginBtn');
+  const loginError = document.getElementById('loginError');
+
+  async function verify(token) {
+    try {
+      const r = await fetch(`/api/auth?token=${encodeURIComponent(token)}`);
+      const d = await r.json();
+      return d.ok === true;
+    } catch { return false; }
+  }
+
+  async function tryLogin() {
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Verificando…';
+    loginError.textContent = '';
+    passInput.classList.remove('error');
+    try {
+      const r = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passInput.value })
+      });
+      const d = await r.json();
+      if (r.ok && d.token) {
+        localStorage.setItem(LS_KEY, d.token);
+        overlay.classList.add('hidden');
+      } else {
+        passInput.classList.add('error');
+        loginError.textContent = d.error || 'Senha incorreta';
+        passInput.value = '';
+        passInput.focus();
+      }
+    } catch {
+      loginError.textContent = 'Erro de conexão. Tente novamente.';
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Entrar';
+    }
+  }
+
+  loginBtn.addEventListener('click', tryLogin);
+  passInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+
+  // Verifica token salvo ao carregar
+  const saved = localStorage.getItem(LS_KEY);
+  if (saved) {
+    verify(saved).then(ok => {
+      if (ok) overlay.classList.add('hidden');
+      else localStorage.removeItem(LS_KEY);
+    });
+  }
+})();
+
 let ACCOUNT = "act_717055595505474";
 
 // ── API proxy helpers ─────────────────────────────────────────────────────────
