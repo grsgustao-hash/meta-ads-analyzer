@@ -1568,11 +1568,26 @@ function resetLinkSearch() {
 }
 
 // ── FETCH IG PERMALINKS via Story + Ad Preview API ────────────────────────────
-// Para criativos subidos direto no Ads Manager (dark posts), a Meta não retorna
-// instagram_permalink_url no campo padrão. Essa função busca via:
-// 1) /{storyId}?fields=instagram_permalink_url  (Facebook post → IG link)
-// 2) /ads/{ad_id}/previews?ad_format=INSTAGRAM_STANDARD  (parse HTML do preview)
+// Cache persistente: evita refazer todas as chamadas a cada carga do dashboard.
+const IG_CACHE_KEY = 'meta_ig_links_v1';
+function loadIgCache() {
+  try { return JSON.parse(localStorage.getItem(IG_CACHE_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveIgCache(map) {
+  try { localStorage.setItem(IG_CACHE_KEY, JSON.stringify(map)); } catch(e) {}
+}
+
 async function fetchIgPermalinks() {
+  // Carrega cache persistente e injeta no _linkMap
+  const cached = loadIgCache();
+  Object.entries(cached).forEach(([adId, ig]) => {
+    if (ig && !_linkMap[adId]?.ig) {
+      if (!_linkMap[adId]) _linkMap[adId] = {};
+      _linkMap[adId].ig = ig;
+    }
+  });
+
+  // Filtra só anúncios ainda sem IG link (nem no cache, nem na API padrão)
   const missing = allAds.filter(a => _storyMap[a.ad_id] && !_linkMap[a.ad_id]?.ig);
   if (!missing.length) return;
 
@@ -1581,7 +1596,8 @@ async function fetchIgPermalinks() {
   show(`🔄 Mapeando links IG (0/${missing.length})…`);
 
   let found = 0;
-  const CONCURRENCY = 5;
+  const newLinks = {};
+  const CONCURRENCY = 3; // reduzido para não competir com carregamento principal
 
   for (let i = 0; i < missing.length; i += CONCURRENCY) {
     const batch = missing.slice(i, i + CONCURRENCY);
@@ -1595,6 +1611,7 @@ async function fetchIgPermalinks() {
         if (d.instagram_permalink_url) {
           if (!_linkMap[a.ad_id]) _linkMap[a.ad_id] = {};
           _linkMap[a.ad_id].ig = d.instagram_permalink_url;
+          newLinks[a.ad_id] = d.instagram_permalink_url;
           found++; return;
         }
       } catch(e) {}
@@ -1604,12 +1621,13 @@ async function fetchIgPermalinks() {
         const r = await fetch(apiUrl(`${a.ad_id}/previews`, { ad_format: 'INSTAGRAM_STANDARD' }));
         const d = await r.json();
         const raw = d?.data?.[0]?.body || '';
-        // Decodifica entidades HTML e busca URL do Instagram no HTML
         const decoded = raw.replace(/&amp;/g,'&').replace(/&#43;/g,'+').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
         const m = decoded.match(/https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv|video)\/([A-Za-z0-9_-]+)/);
         if (m) {
+          const ig = `https://www.instagram.com/reel/${m[1]}/`;
           if (!_linkMap[a.ad_id]) _linkMap[a.ad_id] = {};
-          _linkMap[a.ad_id].ig = `https://www.instagram.com/reel/${m[1]}/`;
+          _linkMap[a.ad_id].ig = ig;
+          newLinks[a.ad_id] = ig;
           found++;
         }
       } catch(e) {}
@@ -1617,6 +1635,9 @@ async function fetchIgPermalinks() {
 
     show(`🔄 Mapeando links IG (${Math.min(i + CONCURRENCY, missing.length)}/${missing.length})…`);
   }
+
+  // Persiste novos links encontrados no cache
+  if (Object.keys(newLinks).length) saveIgCache({ ...cached, ...newLinks });
 
   if (found > 0) {
     if (status) { status.textContent = `✓ ${found} link${found > 1 ? 's' : ''} IG mapeado${found > 1 ? 's' : ''} — busca por link pronta`; status.style.color = '#4ade80'; }
