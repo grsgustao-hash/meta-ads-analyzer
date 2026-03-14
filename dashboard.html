@@ -113,6 +113,7 @@
     #linkResult { display:none; font-size:11px; padding:6px 10px; border-radius:7px; margin-top:6px; }
     #linkResult.found { background:rgba(74,222,128,.08); border:1px solid rgba(74,222,128,.15); color:#4ade80; }
     #linkResult.not-found { background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.15); color:#f87171; }
+    #igLinkStatus { display:none; font-size:10px; color:#444; padding:2px 0 4px 2px; }
   </style>
 </head>
 <body class="min-h-screen">
@@ -340,6 +341,7 @@
             <span id="linkBadge"></span>
           </div>
         </div>
+        <div id="igLinkStatus"></div>
         <div id="linkResult"></div>
         <div class="dark-table">
           <div class="dark-table-scroll">
@@ -401,6 +403,7 @@ let allAds = [], allCamps = [], dailyData = [];
 let _thumbMap = {};
 let _linkMap  = {}; // ad_id → { fb, ig }
 let _creativeIdMap = {}; // ad_id → creative_id (para buscar vídeo)
+let _storyMap = {}; // ad_id → effective_object_story_id
 let currentDateParam = { preset: 'last_7d' };
 let adSortKey = 'spend',   adSortDir   = 'desc';
 let campSortKey = 'spend', campSortDir = 'desc';
@@ -580,6 +583,7 @@ async function load() {
 
         // Build Facebook post URL from effective_object_story_id (format: pageId_postId)
         const storyId = ad.creative?.effective_object_story_id || null;
+        if (storyId) _storyMap[ad.id] = storyId;
         let fb = null;
         if (storyId) {
           const parts = storyId.split('_');
@@ -591,6 +595,9 @@ async function load() {
         thumbs.push({ id: ad.id, t, fb, ig });
       });
       if (adsData.length) renderAdTable(allAds);
+
+      // Busca links IG para dark posts (criativos subidos direto no Ads Manager)
+      fetchIgPermalinks();
 
       // Save complete snapshot to cache (including daily if ready)
       dailyPromise.then(() => {
@@ -1042,25 +1049,28 @@ $('adSearch').addEventListener('input',e=>{
 });
 
 // ── LINK SEARCH (Instagram / Facebook) ───────────────────────────────────────
+// Extrai o shortcode de qualquer URL do Instagram (/p/, /reel/, /tv/, /video/)
+function extractIgShortcode(url) {
+  if (!url) return null;
+  const m = url.match(/\/(?:p|reel|tv|video)\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : null;
+}
+
 function parseSocialUrl(raw) {
   try {
     const u = new URL(raw.trim());
     const host = u.hostname.replace('www.', '');
-
-    // Instagram: instagram.com/p/SHORTCODE/
+    // Instagram: /p/, /reel/, /tv/, /video/
     if (host === 'instagram.com') {
-      const m = u.pathname.match(/\/p\/([A-Za-z0-9_-]+)/);
-      if (m) return { platform: 'ig', id: m[1] };
+      const sc = extractIgShortcode(u.pathname);
+      if (sc) return { platform: 'ig', id: sc };
     }
-
-    // Facebook permalink: facebook.com/permalink.php?story_fbid=XXX
+    // Facebook
     if (host === 'facebook.com') {
       const storyFbid = u.searchParams.get('story_fbid');
       if (storyFbid) return { platform: 'fb', id: storyFbid };
-      // Facebook post: facebook.com/xxx/posts/YYY
-      const m = u.pathname.match(/\/posts\/(\d+)/);
+      const m = u.pathname.match(/\/posts\/([A-Za-z0-9]+)/);
       if (m) return { platform: 'fb', id: m[1] };
-      // Facebook video: facebook.com/xxx/videos/YYY
       const mv = u.pathname.match(/\/videos\/(\d+)/);
       if (mv) return { platform: 'fb', id: mv[1] };
     }
@@ -1073,8 +1083,14 @@ function findAdsByLink(parsed) {
   return allAds.filter(a => {
     const links = _linkMap[a.ad_id];
     if (!links) return false;
-    if (parsed.platform === 'ig' && links.ig) return links.ig.includes(parsed.id);
-    if (parsed.platform === 'fb' && links.fb) return links.fb.includes(parsed.id);
+    if (parsed.platform === 'ig') {
+      // Extrai o shortcode da URL armazenada para comparar corretamente
+      const stored = extractIgShortcode(links.ig);
+      return stored === parsed.id;
+    }
+    if (parsed.platform === 'fb' && links.fb) {
+      return links.fb.includes(parsed.id);
+    }
     return false;
   });
 }
@@ -1086,6 +1102,60 @@ function resetLinkSearch() {
   result.style.display = 'none';
   badge.className = '';
   result.className = '';
+}
+
+// ── FETCH IG PERMALINKS via Story + Ad Preview API ────────────────────────────
+async function fetchIgPermalinks() {
+  const missing = allAds.filter(a => _storyMap[a.ad_id] && !_linkMap[a.ad_id]?.ig);
+  if (!missing.length) return;
+
+  const status = $('igLinkStatus');
+  const show = txt => { if (status) { status.textContent = txt; status.style.display = 'block'; status.style.color = '#444'; } };
+  show(`🔄 Mapeando links IG (0/${missing.length})…`);
+
+  let found = 0;
+  const CONCURRENCY = 5;
+
+  for (let i = 0; i < missing.length; i += CONCURRENCY) {
+    const batch = missing.slice(i, i + CONCURRENCY);
+    await Promise.all(batch.map(async a => {
+      const storyId = _storyMap[a.ad_id];
+
+      // Tentativa 1: consultar o post do Facebook pelo storyId
+      try {
+        const r = await fetch(apiUrl(storyId, { fields: 'instagram_permalink_url' }));
+        const d = await r.json();
+        if (d.instagram_permalink_url) {
+          if (!_linkMap[a.ad_id]) _linkMap[a.ad_id] = {};
+          _linkMap[a.ad_id].ig = d.instagram_permalink_url;
+          found++; return;
+        }
+      } catch(e) {}
+
+      // Tentativa 2: Ad Preview API — extrai link IG do HTML do preview
+      try {
+        const r = await fetch(apiUrl(`${a.ad_id}/previews`, { ad_format: 'INSTAGRAM_STANDARD' }));
+        const d = await r.json();
+        const raw = d?.data?.[0]?.body || '';
+        const decoded = raw.replace(/&amp;/g,'&').replace(/&#43;/g,'+').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        const m = decoded.match(/https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv|video)\/([A-Za-z0-9_-]+)/);
+        if (m) {
+          if (!_linkMap[a.ad_id]) _linkMap[a.ad_id] = {};
+          _linkMap[a.ad_id].ig = `https://www.instagram.com/reel/${m[1]}/`;
+          found++;
+        }
+      } catch(e) {}
+    }));
+
+    show(`🔄 Mapeando links IG (${Math.min(i + CONCURRENCY, missing.length)}/${missing.length})…`);
+  }
+
+  if (found > 0) {
+    if (status) { status.textContent = `✓ ${found} link${found > 1 ? 's' : ''} IG mapeado${found > 1 ? 's' : ''} — busca por link pronta`; status.style.color = '#4ade80'; }
+    setTimeout(() => { if (status) status.style.display = 'none'; }, 6000);
+  } else {
+    if (status) status.style.display = 'none';
+  }
 }
 
 $('linkSearchInput').addEventListener('input', e => {
