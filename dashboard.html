@@ -1105,7 +1105,23 @@ function resetLinkSearch() {
 }
 
 // ── FETCH IG PERMALINKS via Story + Ad Preview API ────────────────────────────
+const IG_CACHE_KEY = 'meta_ig_links_v1';
+function loadIgCache() {
+  try { return JSON.parse(localStorage.getItem(IG_CACHE_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveIgCache(map) {
+  try { localStorage.setItem(IG_CACHE_KEY, JSON.stringify(map)); } catch(e) {}
+}
+
 async function fetchIgPermalinks() {
+  const cached = loadIgCache();
+  Object.entries(cached).forEach(([adId, ig]) => {
+    if (ig && !_linkMap[adId]?.ig) {
+      if (!_linkMap[adId]) _linkMap[adId] = {};
+      _linkMap[adId].ig = ig;
+    }
+  });
+
   const missing = allAds.filter(a => _storyMap[a.ad_id] && !_linkMap[a.ad_id]?.ig);
   if (!missing.length) return;
 
@@ -1114,25 +1130,25 @@ async function fetchIgPermalinks() {
   show(`🔄 Mapeando links IG (0/${missing.length})…`);
 
   let found = 0;
-  const CONCURRENCY = 5;
+  const newLinks = {};
+  const CONCURRENCY = 3;
 
   for (let i = 0; i < missing.length; i += CONCURRENCY) {
     const batch = missing.slice(i, i + CONCURRENCY);
     await Promise.all(batch.map(async a => {
       const storyId = _storyMap[a.ad_id];
 
-      // Tentativa 1: consultar o post do Facebook pelo storyId
       try {
         const r = await fetch(apiUrl(storyId, { fields: 'instagram_permalink_url' }));
         const d = await r.json();
         if (d.instagram_permalink_url) {
           if (!_linkMap[a.ad_id]) _linkMap[a.ad_id] = {};
           _linkMap[a.ad_id].ig = d.instagram_permalink_url;
+          newLinks[a.ad_id] = d.instagram_permalink_url;
           found++; return;
         }
       } catch(e) {}
 
-      // Tentativa 2: Ad Preview API — extrai link IG do HTML do preview
       try {
         const r = await fetch(apiUrl(`${a.ad_id}/previews`, { ad_format: 'INSTAGRAM_STANDARD' }));
         const d = await r.json();
@@ -1140,8 +1156,10 @@ async function fetchIgPermalinks() {
         const decoded = raw.replace(/&amp;/g,'&').replace(/&#43;/g,'+').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
         const m = decoded.match(/https?:\/\/(?:www\.)?instagram\.com\/(?:p|reel|tv|video)\/([A-Za-z0-9_-]+)/);
         if (m) {
+          const ig = `https://www.instagram.com/reel/${m[1]}/`;
           if (!_linkMap[a.ad_id]) _linkMap[a.ad_id] = {};
-          _linkMap[a.ad_id].ig = `https://www.instagram.com/reel/${m[1]}/`;
+          _linkMap[a.ad_id].ig = ig;
+          newLinks[a.ad_id] = ig;
           found++;
         }
       } catch(e) {}
@@ -1149,6 +1167,8 @@ async function fetchIgPermalinks() {
 
     show(`🔄 Mapeando links IG (${Math.min(i + CONCURRENCY, missing.length)}/${missing.length})…`);
   }
+
+  if (Object.keys(newLinks).length) saveIgCache({ ...cached, ...newLinks });
 
   if (found > 0) {
     if (status) { status.textContent = `✓ ${found} link${found > 1 ? 's' : ''} IG mapeado${found > 1 ? 's' : ''} — busca por link pronta`; status.style.color = '#4ade80'; }
