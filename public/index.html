@@ -47,6 +47,18 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    /* ── Link Search ─────────────────────────────────────────────── */
+    #linkSearchWrap { position:relative; flex:2; min-width:240px; }
+    #linkSearchInput { padding:7px 100px 7px 30px; width:100%; background:#141414; border:1px solid rgba(255,255,255,.08); border-radius:8px; color:#ccc; font-size:12px; outline:none; }
+    #linkSearchInput::placeholder { color:#3a3a3a; }
+    #linkBadge { position:absolute; right:8px; top:50%; transform:translateY(-50%); display:none; font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; letter-spacing:.04em; pointer-events:none; }
+    #linkBadge.ig  { background:rgba(225,48,108,.18); color:#e1306c; border:1px solid rgba(225,48,108,.3); }
+    #linkBadge.fb  { background:rgba(24,119,242,.18); color:#1877f2; border:1px solid rgba(24,119,242,.3); }
+    #linkBadge.err { background:rgba(248,113,113,.15); color:#f87171; border:1px solid rgba(248,113,113,.25); }
+    #linkResult { display:none; font-size:11px; padding:6px 10px; border-radius:7px; margin-bottom:8px; }
+    #linkResult.found { background:rgba(74,222,128,.08); border:1px solid rgba(74,222,128,.15); color:#4ade80; }
+    #linkResult.not-found { background:rgba(248,113,113,.08); border:1px solid rgba(248,113,113,.15); color:#f87171; }
     @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
 
     /* ── KPI Cards ──────────────────────────────────────────────── */
@@ -490,9 +502,15 @@
     <section id="sectionAds" style="margin-bottom:28px">
       <!-- Barra de controles -->
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
-        <div style="position:relative;flex:1;min-width:160px;max-width:280px">
+        <div style="position:relative;flex:1;min-width:160px;max-width:240px">
           <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#444;pointer-events:none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
           <input id="adSearch" type="text" placeholder="Buscar anúncio…" style="width:100%;padding:7px 10px 7px 30px;background:#141414;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#ccc;font-size:12px;outline:none"/>
+        </div>
+        <!-- Busca por link do post IG/FB -->
+        <div id="linkSearchWrap">
+          <svg style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:13px;height:13px;color:#444;pointer-events:none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+          <input id="linkSearchInput" placeholder="Cole um link do Instagram ou Facebook…"/>
+          <span id="linkBadge"></span>
         </div>
         <select id="adSortSelect" style="padding:7px 10px;background:#141414;border:1px solid rgba(255,255,255,.08);border-radius:8px;color:#888;font-size:12px;outline:none;cursor:pointer">
           <option value="spend">Gasto ↓</option>
@@ -504,6 +522,8 @@
         </select>
         <span style="font-size:11px;color:#444;margin-left:auto" id="tabNote">—</span>
       </div>
+      <!-- Resultado do link search -->
+      <div id="linkResult"></div>
       <!-- Filtro por UTM (produtos) — aparece quando URLs com UTM são detectadas -->
       <div id="utmFilterRow" style="display:none;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -1485,7 +1505,75 @@ function filterAds(q) {
   return allAds.filter(a => a.ad_name?.toLowerCase().includes(s));
 }
 $('adSearch').addEventListener('input',e=>{
+  if (e.target.value) { $('linkSearchInput').value = ''; resetLinkSearch(); }
   renderAdCards(filterAds(e.target.value));
+});
+
+// ── LINK SEARCH (Instagram / Facebook) ───────────────────────────────────────
+function parseSocialUrl(raw) {
+  try {
+    const u = new URL(raw.trim());
+    const host = u.hostname.replace('www.', '');
+    if (host === 'instagram.com') {
+      const m = u.pathname.match(/\/p\/([A-Za-z0-9_-]+)/);
+      if (m) return { platform: 'ig', id: m[1] };
+    }
+    if (host === 'facebook.com') {
+      const storyFbid = u.searchParams.get('story_fbid');
+      if (storyFbid) return { platform: 'fb', id: storyFbid };
+      const m = u.pathname.match(/\/posts\/(\d+)/);
+      if (m) return { platform: 'fb', id: m[1] };
+      const mv = u.pathname.match(/\/videos\/(\d+)/);
+      if (mv) return { platform: 'fb', id: mv[1] };
+    }
+  } catch(e) {}
+  return null;
+}
+
+function findAdsByLink(parsed) {
+  if (!parsed) return [];
+  return allAds.filter(a => {
+    const links = _linkMap[a.ad_id];
+    if (!links) return false;
+    if (parsed.platform === 'ig' && links.ig) return links.ig.includes(parsed.id);
+    if (parsed.platform === 'fb' && links.fb) return links.fb.includes(parsed.id);
+    return false;
+  });
+}
+
+function resetLinkSearch() {
+  const badge = $('linkBadge'), result = $('linkResult');
+  badge.style.display = 'none'; badge.className = '';
+  result.style.display = 'none'; result.className = '';
+}
+
+$('linkSearchInput').addEventListener('input', e => {
+  const raw = e.target.value.trim();
+  const badge = $('linkBadge'), result = $('linkResult');
+  if (!raw) { resetLinkSearch(); renderAdCards(allAds); return; }
+  $('adSearch').value = '';
+  const parsed = parseSocialUrl(raw);
+  if (!parsed) {
+    badge.textContent = 'URL inválida'; badge.className = 'err'; badge.style.display = 'inline-block';
+    result.style.display = 'none'; renderAdCards(allAds); return;
+  }
+  badge.textContent   = parsed.platform === 'ig' ? '📸 Instagram' : '📘 Facebook';
+  badge.className     = parsed.platform;
+  badge.style.display = 'inline-block';
+  if (!Object.keys(_linkMap).length) {
+    result.textContent = '⏳ Aguarde — links dos posts ainda carregando. Tente em alguns segundos.';
+    result.className = 'linkResult not-found'; result.style.display = 'block'; return;
+  }
+  const matched = findAdsByLink(parsed);
+  if (matched.length) {
+    result.textContent = `✓ ${matched.length} anúncio${matched.length > 1 ? 's' : ''} encontrado${matched.length > 1 ? 's' : ''} com este post`;
+    result.className = 'linkResult found'; result.style.display = 'block';
+    renderAdCards(matched);
+  } else {
+    result.textContent = '✗ Nenhum anúncio encontrado para este link — o post pode não estar sendo veiculado como ad ou os dados ainda estão carregando.';
+    result.className = 'linkResult not-found'; result.style.display = 'block';
+    renderAdCards([]);
+  }
 });
 
 // ── DATE PICKER ──────────────────────────────────────────────────────────────
